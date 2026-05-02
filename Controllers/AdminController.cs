@@ -145,9 +145,11 @@ public class AdminController : Controller
         }
 
         // tăng lên 5MB vì GIF thường nặng hơn
-        if (image.Length > 5 * 1024 * 1024)
+        long maxSize = 10 * 1024 * 1024; // 10MB
+
+        if (image.Length > maxSize)
         {
-            TempData["Error"] = "Ảnh tối đa 5MB!";
+            TempData["Error"] = $"Ảnh tối đa {maxSize / 1024 / 1024}MB!";
             return RedirectToAction("Index");
         }
 
