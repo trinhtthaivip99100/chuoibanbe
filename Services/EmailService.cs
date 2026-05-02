@@ -1,13 +1,14 @@
-using MailKit.Net.Smtp;
-using MailKit.Security;
 using Microsoft.Extensions.Configuration;
-using MimeKit;
+using System.Diagnostics;
+using System.Net;
+using System.Net.Mail;
+using System.Threading.Tasks;
 
+namespace KetBanChoiChuoi.Services;
 
 public class EmailService
 {
     private readonly IConfiguration _config;
-
     public EmailService(IConfiguration config)
     {
         _config = config;
@@ -18,33 +19,33 @@ public class EmailService
         var smtpEmail = _config["Smtp:Email"];
         var smtpPassword = _config["Smtp:Password"];
 
-        Console.WriteLine($"[SMTP DEBUG] Bắt đầu gửi tới {toEmail}");
-
-        var message = new MimeMessage();
-        message.From.Add(new MailboxAddress("Admin Chuỗi", smtpEmail));
-        message.To.Add(MailboxAddress.Parse(toEmail));
-        message.Subject = subject;
-        message.Body = new TextPart("html") { Text = body };
-
-        using var client = new SmtpClient();
+        Console.WriteLine($"[SMTP DEBUG] Email={smtpEmail}, HasPassword={!string.IsNullOrEmpty(smtpPassword)}");
 
         try
         {
-            await client.ConnectAsync("smtp.gmail.com", 587, SecureSocketOptions.StartTls);
-            Console.WriteLine("[SMTP] Connected!");
+            using var client = new SmtpClient("smtp.gmail.com", 587)
+            {
+                EnableSsl = true,
+                Credentials = new NetworkCredential(smtpEmail, smtpPassword)
+            };
 
-            await client.AuthenticateAsync(smtpEmail, smtpPassword);
-            Console.WriteLine("[SMTP] Authenticated!");
+            var mailMessage = new MailMessage
+            {
+                From = new MailAddress(smtpEmail, "Admin Chuỗi"),
+                Subject = subject,
+                Body = body,
+                IsBodyHtml = true
+            };
 
-            await client.SendAsync(message);
-            Console.WriteLine($"[SMTP SUCCESS] Đã gửi tới {toEmail}");
+            mailMessage.To.Add(toEmail);
+            await client.SendMailAsync(mailMessage);
 
-            await client.DisconnectAsync(true);
+            Console.WriteLine($"[SMTP SUCCESS] Đã gửi email tới {toEmail}");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[SMTP ERROR] {ex.Message}");
-            Console.WriteLine($"[SMTP INNER] {ex.InnerException?.Message}");
+            Console.WriteLine($"[SMTP ERROR DETAIL] {ex.InnerException?.Message}");
             throw;
         }
     }

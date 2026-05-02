@@ -6,19 +6,16 @@ using KetBanChoiChuoi.Data;
 using KetBanChoiChuoi.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
-using KetBanChoiChuoi.Services;
 
 namespace KetBanChoiChuoi.Controllers;
 
 public class AuthController : Controller
 {
     private readonly AppDbContext _db;
-    private readonly EmailService _emailService;
 
-    public AuthController(AppDbContext db, EmailService emailService)
+    public AuthController(AppDbContext db)
     {
         _db = db;
-        _emailService = emailService;
     }
 
     // ================= LOGIN =================
@@ -40,11 +37,6 @@ public class AuthController : Controller
         {
             TempData["ErrorMessage"] = $"Tài khoản bị khóa: {user.LockReason}";
             return View();
-        }
-
-        if (!user.IsEmailVerified)
-        {
-            return RedirectToAction("VerifyOtp", new { email });
         }
 
         var hasher = new PasswordHasher<User>();
@@ -97,70 +89,20 @@ public class AuthController : Controller
         {
             Username = username,
             Email = email,
-            DisplayName = displayName
+            DisplayName = displayName,
+            IsEmailVerified = true  // bỏ qua xác thực email
         };
 
         var hasher = new PasswordHasher<User>();
         user.Password = hasher.HashPassword(user, password);
 
         _db.Users.Add(user);
-
-        // OTP
-        var code = new Random().Next(100000, 999999).ToString();
-
-        _db.OtpRecords.Add(new OtpRecord
-        {
-            Email = email,
-            Code = code,
-            ExpiryTime = DateTimeOffset.UtcNow.AddMinutes(10),
-            Purpose = "Register"
-        });
-
         await _db.SaveChangesAsync();
 
-        await _emailService.SendEmailAsync(
-     email,
-     "Mã OTP đăng ký",
-     $"Mã OTP của bạn là: <b>{code}</b>. Có hiệu lực 10 phút."
- );
+        await SignInUser(user);
 
-        TempData["SuccessMessage"] = "Đăng ký thành công! Kiểm tra email để lấy OTP.";
-        return RedirectToAction("VerifyOtp", new { email });
-    }
-
-    // ================= VERIFY OTP =================
-    [HttpGet]
-    public IActionResult VerifyOtp(string email)
-    {
-        ViewBag.Email = email;
-        return View();
-    }
-
-    [HttpPost]
-    public async Task<IActionResult> VerifyOtp(string email, string code)
-    {
-        var otp = await _db.OtpRecords
-            .Where(o => o.Email == email && o.Code == code && !o.IsUsed && o.Purpose == "Register")
-            .OrderByDescending(o => o.Id)
-            .FirstOrDefaultAsync();
-
-        if (otp == null || otp.ExpiryTime < DateTimeOffset.UtcNow)
-        {
-            TempData["ErrorMessage"] = "OTP không hợp lệ hoặc hết hạn!";
-            ViewBag.Email = email;
-            return View();
-        }
-
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == email);
-        if (user == null) return RedirectToAction("Login");
-
-        user.IsEmailVerified = true;
-        otp.IsUsed = true;
-
-        await _db.SaveChangesAsync();
-
-        TempData["SuccessMessage"] = "Xác thực thành công!";
-        return RedirectToAction("Login");
+        TempData["SuccessMessage"] = "Đăng ký thành công!";
+        return RedirectToAction("Index", "Home");
     }
 
     // ================= FORGOT PASSWORD =================
@@ -178,80 +120,9 @@ public class AuthController : Controller
             return View();
         }
 
-        // chống spam OTP (60s)
-        var lastOtp = await _db.OtpRecords
-            .Where(o => o.Email == email && o.Purpose == "ResetPassword")
-            .OrderByDescending(o => o.Id)
-            .FirstOrDefaultAsync();
-
-        if (lastOtp != null && lastOtp.ExpiryTime > DateTimeOffset.UtcNow.AddMinutes(-9))
-        {
-            TempData["ErrorMessage"] = "Vui lòng đợi trước khi gửi OTP mới!";
-            return View();
-        }
-
-        var code = new Random().Next(100000, 999999).ToString();
-
-        _db.OtpRecords.Add(new OtpRecord
-        {
-            Email = email,
-            Code = code,
-            ExpiryTime = DateTimeOffset.UtcNow.AddMinutes(10),
-            Purpose = "ResetPassword"
-        });
-
-        await _db.SaveChangesAsync();
-
-        await _emailService.SendEmailAsync(
-     email,
-     "Mã OTP đăng ký",
-     $"Mã OTP của bạn là: <b>{code}</b>. Có hiệu lực 10 phút."
- );
-
-        TempData["SuccessMessage"] = "OTP đã gửi!";
-        return RedirectToAction("ResetPassword", new { email });
-    }
-
-    // ================= RESET PASSWORD =================
-    [HttpGet]
-    public IActionResult ResetPassword(string email)
-    {
-        ViewBag.Email = email;
+        // Tạm thời không gửi email được — thông báo liên hệ admin
+        TempData["ErrorMessage"] = "Chức năng quên mật khẩu tạm thời không khả dụng. Vui lòng liên hệ admin!";
         return View();
-    }
-
-    [HttpPost]
-    public async Task<IActionResult> ResetPassword(string email, string code, string newPassword)
-    {
-        if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 6)
-        {
-            TempData["ErrorMessage"] = "Mật khẩu >= 6 ký tự!";
-            ViewBag.Email = email;
-            return View();
-        }
-
-        var otp = await _db.OtpRecords
-            .FirstOrDefaultAsync(o => o.Email == email && o.Code == code && !o.IsUsed && o.Purpose == "ResetPassword");
-
-        if (otp == null || otp.ExpiryTime < DateTimeOffset.UtcNow)
-        {
-            TempData["ErrorMessage"] = "OTP không hợp lệ!";
-            ViewBag.Email = email;
-            return View();
-        }
-
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == email);
-        if (user == null) return RedirectToAction("Login");
-
-        var hasher = new PasswordHasher<User>();
-        user.Password = hasher.HashPassword(user, newPassword);
-
-        otp.IsUsed = true;
-
-        await _db.SaveChangesAsync();
-
-        TempData["SuccessMessage"] = "Đổi mật khẩu thành công!";
-        return RedirectToAction("Login");
     }
 
     // ================= LOGOUT =================
