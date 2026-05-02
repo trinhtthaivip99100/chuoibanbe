@@ -1,7 +1,8 @@
+using Microsoft.Extensions.Configuration;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Mail;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
 
 namespace KetBanChoiChuoi.Services;
 
@@ -20,6 +21,9 @@ public class EmailService
         var smtpHost = _config["Smtp:Host"] ?? "smtp.gmail.com";
         var smtpPort = int.Parse(_config["Smtp:Port"] ?? "587");
         var enableSsl = bool.Parse(_config["Smtp:EnableSsl"] ?? "true");
+
+        // Debug log
+    Console.WriteLine($"[SMTP DEBUG] Email={smtpEmail}, HasPassword={!string.IsNullOrEmpty(smtpPassword)}");
 
         if (string.IsNullOrEmpty(smtpEmail) || string.IsNullOrEmpty(smtpPassword))
             throw new Exception($"SMTP chưa được cấu hình! Email={smtpEmail}");
