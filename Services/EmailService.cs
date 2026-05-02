@@ -17,17 +17,16 @@ public class EmailService
     {
         var smtpEmail = _config["Smtp:Email"];
         var smtpPassword = _config["Smtp:Password"];
-        
-        if (string.IsNullOrEmpty(smtpEmail) || smtpEmail == "YOUR_GMAIL_HERE" || string.IsNullOrEmpty(smtpPassword))
-        {
-            // Fallback for testing if email isn't configured properly
-            System.Console.WriteLine($"[EMAIL SIMULATION] To: {toEmail} | Subject: {subject} | Body: {body}");
-            return;
-        }
+        var smtpHost = _config["Smtp:Host"] ?? "smtp.gmail.com";
+        var smtpPort = int.Parse(_config["Smtp:Port"] ?? "587");
+        var enableSsl = bool.Parse(_config["Smtp:EnableSsl"] ?? "true");
 
-        using var client = new SmtpClient("smtp.gmail.com", 587)
+        if (string.IsNullOrEmpty(smtpEmail) || string.IsNullOrEmpty(smtpPassword))
+            throw new Exception($"SMTP chưa được cấu hình! Email={smtpEmail}");
+
+        using var client = new SmtpClient(smtpHost, smtpPort)
         {
-            EnableSsl = true,
+            EnableSsl = enableSsl,
             Credentials = new NetworkCredential(smtpEmail, smtpPassword)
         };
 
@@ -38,8 +37,8 @@ public class EmailService
             Body = body,
             IsBodyHtml = true
         };
-        mailMessage.To.Add(toEmail);
 
+        mailMessage.To.Add(toEmail);
         await client.SendMailAsync(mailMessage);
     }
 }
