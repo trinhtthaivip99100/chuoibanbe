@@ -18,31 +18,35 @@ public class EmailService
     {
         var smtpEmail = _config["Smtp:Email"];
         var smtpPassword = _config["Smtp:Password"];
-        var smtpHost = _config["Smtp:Host"] ?? "smtp.gmail.com";
-        var smtpPort = int.Parse(_config["Smtp:Port"] ?? "587");
-        var enableSsl = bool.Parse(_config["Smtp:EnableSsl"] ?? "true");
 
-        // Debug log
-    Console.WriteLine($"[SMTP DEBUG] Email={smtpEmail}, HasPassword={!string.IsNullOrEmpty(smtpPassword)}");
+        Console.WriteLine($"[SMTP DEBUG] Email={smtpEmail}, HasPassword={!string.IsNullOrEmpty(smtpPassword)}");
 
-        if (string.IsNullOrEmpty(smtpEmail) || string.IsNullOrEmpty(smtpPassword))
-            throw new Exception($"SMTP chưa được cấu hình! Email={smtpEmail}");
-
-        using var client = new SmtpClient(smtpHost, smtpPort)
+        try
         {
-            EnableSsl = enableSsl,
-            Credentials = new NetworkCredential(smtpEmail, smtpPassword)
-        };
+            using var client = new SmtpClient("smtp.gmail.com", 587)
+            {
+                EnableSsl = true,
+                Credentials = new NetworkCredential(smtpEmail, smtpPassword)
+            };
 
-        var mailMessage = new MailMessage
+            var mailMessage = new MailMessage
+            {
+                From = new MailAddress(smtpEmail, "Admin Chuỗi"),
+                Subject = subject,
+                Body = body,
+                IsBodyHtml = true
+            };
+
+            mailMessage.To.Add(toEmail);
+            await client.SendMailAsync(mailMessage);
+
+            Console.WriteLine($"[SMTP SUCCESS] Đã gửi email tới {toEmail}");
+        }
+        catch (Exception ex)
         {
-            From = new MailAddress(smtpEmail, "Admin Chuỗi"),
-            Subject = subject,
-            Body = body,
-            IsBodyHtml = true
-        };
-
-        mailMessage.To.Add(toEmail);
-        await client.SendMailAsync(mailMessage);
+            Console.WriteLine($"[SMTP ERROR] {ex.Message}");
+            Console.WriteLine($"[SMTP ERROR DETAIL] {ex.InnerException?.Message}");
+            throw;
+        }
     }
 }
