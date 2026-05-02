@@ -137,16 +137,17 @@ public class AdminController : Controller
         }
 
         // validate file
-        var allowed = new[] { "image/jpeg", "image/png", "image/webp" };
+        var allowed = new[] { "image/jpeg", "image/png", "image/webp", "image/gif" };
         if (!allowed.Contains(image.ContentType))
         {
             TempData["Error"] = "Ảnh không hợp lệ!";
             return RedirectToAction("Index");
         }
 
-        if (image.Length > 2 * 1024 * 1024)
+        // tăng lên 5MB vì GIF thường nặng hơn
+        if (image.Length > 5 * 1024 * 1024)
         {
-            TempData["Error"] = "Ảnh tối đa 2MB!";
+            TempData["Error"] = "Ảnh tối đa 5MB!";
             return RedirectToAction("Index");
         }
 
