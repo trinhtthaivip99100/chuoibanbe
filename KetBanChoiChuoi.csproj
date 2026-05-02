@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="CloudinaryDotNet" Version="1.29.0" />
+    <PackageReference Include="MailKit" Version="4.16.0" />
 
     <!-- EF Core -->
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.26" />
