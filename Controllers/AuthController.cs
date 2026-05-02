@@ -5,12 +5,8 @@ using System.Security.Claims;
 using KetBanChoiChuoi.Data;
 using KetBanChoiChuoi.Models;
 using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
-using System;
 using KetBanChoiChuoi.Services;
-using System.Linq;
 
 namespace KetBanChoiChuoi.Controllers;
 
@@ -25,6 +21,7 @@ public class AuthController : Controller
         _emailService = emailService;
     }
 
+    // ================= LOGIN =================
     [HttpGet]
     public IActionResult Login() => View();
 
@@ -32,16 +29,22 @@ public class AuthController : Controller
     public async Task<IActionResult> Login(string email, string password)
     {
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == email);
+
         if (user == null)
         {
             TempData["ErrorMessage"] = "Sai tài khoản hoặc mật khẩu!";
             return View();
         }
 
+        if (user.IsLocked)
+        {
+            TempData["ErrorMessage"] = $"Tài khoản bị khóa: {user.LockReason}";
+            return View();
+        }
+
         if (!user.IsEmailVerified)
         {
-            TempData["ErrorMessage"] = "Tài khoản chưa được xác thực Email!";
-            return RedirectToAction("VerifyOtp", new { email = user.Email });
+            return RedirectToAction("VerifyOtp", new { email });
         }
 
         var hasher = new PasswordHasher<User>();
@@ -53,32 +56,13 @@ public class AuthController : Controller
             return View();
         }
 
-        if (user.IsLocked)
-        {
-            TempData["ErrorMessage"] = $"Tài khoản đã bị khóa! Lý do: {user.LockReason}";
-            return View();
-        }
-
-        var claims = new List<Claim>
-        {
-            new Claim(ClaimTypes.Name, user.Username),
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Role, user.RoleId == 1 ? "Admin" : "User"),
-            new Claim("DisplayName", user.DisplayName),
-            new Claim("RoleId", user.RoleId.ToString())
-        };
-        
-        if(!string.IsNullOrEmpty(user.AvatarUrl)) {
-            claims.Add(new Claim("AvatarUrl", user.AvatarUrl));
-        }
-
-        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-        await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity), new AuthenticationProperties { IsPersistent = true });
+        await SignInUser(user);
 
         TempData["SuccessMessage"] = "Đăng nhập thành công!";
         return RedirectToAction("Index", "Home");
     }
 
+    // ================= REGISTER =================
     [HttpGet]
     public IActionResult Register() => View();
 
@@ -87,57 +71,64 @@ public class AuthController : Controller
     {
         if (string.IsNullOrWhiteSpace(username) || username.Length < 5)
         {
-            TempData["ErrorMessage"] = "Mã ID phải từ 5 ký tự trở lên!";
+            TempData["ErrorMessage"] = "ID phải >= 5 ký tự!";
             return View();
         }
+
         if (string.IsNullOrWhiteSpace(displayName) || displayName.Length > 15)
         {
-            TempData["ErrorMessage"] = "Tên hiển thị không được vượt quá 15 ký tự!";
+            TempData["ErrorMessage"] = "Tên hiển thị tối đa 15 ký tự!";
             return View();
         }
+
         if (string.IsNullOrWhiteSpace(password) || password.Length < 6)
         {
-            TempData["ErrorMessage"] = "Mật khẩu phải từ 6 ký tự trở lên!";
+            TempData["ErrorMessage"] = "Mật khẩu >= 6 ký tự!";
             return View();
         }
 
-        if (await _db.Users.AnyAsync(u => u.Username == username))
+        if (await _db.Users.AnyAsync(u => u.Email == email || u.Username == username))
         {
-            TempData["ErrorMessage"] = "Tên tài khoản (Mã ID) đã tồn tại!";
-            return View();
-        }
-        
-        if (await _db.Users.AnyAsync(u => u.Email == email))
-        {
-            TempData["ErrorMessage"] = "Email đã được sử dụng!";
+            TempData["ErrorMessage"] = "Email hoặc ID đã tồn tại!";
             return View();
         }
 
-        var user = new User { Username = username, Email = email, DisplayName = displayName, RoleId = 2, IsEmailVerified = false };
+        var user = new User
+        {
+            Username = username,
+            Email = email,
+            DisplayName = displayName
+        };
+
         var hasher = new PasswordHasher<User>();
         user.Password = hasher.HashPassword(user, password);
 
         _db.Users.Add(user);
-        
-        // Generate OTP
-        var random = new Random();
-        var code = random.Next(100000, 999999).ToString();
-        var otp = new OtpRecord {
+
+        // OTP
+        var code = new Random().Next(100000, 999999).ToString();
+
+        _db.OtpRecords.Add(new OtpRecord
+        {
             Email = email,
             Code = code,
-            ExpiryTime = DateTime.UtcNow.AddMinutes(10),
+            ExpiryTime = DateTimeOffset.UtcNow.AddMinutes(10),
             Purpose = "Register"
-        };
-        _db.OtpRecords.Add(otp);
-        
+        });
+
         await _db.SaveChangesAsync();
 
-        await _emailService.SendEmailAsync(email, "Mã xác thực Đăng ký - Chuỗi", $"Mã OTP của bạn là: <b>{code}</b>. Mã có hiệu lực trong 10 phút.");
+        await _emailService.SendEmailAsync(
+     email,
+     "Mã OTP đăng ký",
+     $"Mã OTP của bạn là: <b>{code}</b>. Có hiệu lực 10 phút."
+ );
 
-        TempData["SuccessMessage"] = "Đăng ký thành công! Vui lòng kiểm tra Email để lấy mã OTP.";
-        return RedirectToAction("VerifyOtp", new { email = email });
+        TempData["SuccessMessage"] = "Đăng ký thành công! Kiểm tra email để lấy OTP.";
+        return RedirectToAction("VerifyOtp", new { email });
     }
 
+    // ================= VERIFY OTP =================
     [HttpGet]
     public IActionResult VerifyOtp(string email)
     {
@@ -148,28 +139,31 @@ public class AuthController : Controller
     [HttpPost]
     public async Task<IActionResult> VerifyOtp(string email, string code)
     {
-        var otp = await _db.OtpRecords.FirstOrDefaultAsync(o => o.Email == email && o.Code == code && o.Purpose == "Register" && !o.IsUsed);
-        
-        if (otp == null || otp.ExpiryTime < DateTime.UtcNow)
+        var otp = await _db.OtpRecords
+            .Where(o => o.Email == email && o.Code == code && !o.IsUsed && o.Purpose == "Register")
+            .OrderByDescending(o => o.Id)
+            .FirstOrDefaultAsync();
+
+        if (otp == null || otp.ExpiryTime < DateTimeOffset.UtcNow)
         {
-            TempData["ErrorMessage"] = "Mã OTP không hợp lệ hoặc đã hết hạn!";
+            TempData["ErrorMessage"] = "OTP không hợp lệ hoặc hết hạn!";
             ViewBag.Email = email;
             return View();
         }
 
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == email);
-        if (user != null)
-        {
-            user.IsEmailVerified = true;
-            otp.IsUsed = true;
-            await _db.SaveChangesAsync();
-            TempData["SuccessMessage"] = "Xác thực Email thành công! Bạn có thể đăng nhập.";
-            return RedirectToAction("Login");
-        }
+        if (user == null) return RedirectToAction("Login");
 
+        user.IsEmailVerified = true;
+        otp.IsUsed = true;
+
+        await _db.SaveChangesAsync();
+
+        TempData["SuccessMessage"] = "Xác thực thành công!";
         return RedirectToAction("Login");
     }
 
+    // ================= FORGOT PASSWORD =================
     [HttpGet]
     public IActionResult ForgotPassword() => View();
 
@@ -177,33 +171,48 @@ public class AuthController : Controller
     public async Task<IActionResult> ForgotPassword(string email)
     {
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == email);
+
         if (user == null)
         {
-            TempData["ErrorMessage"] = "Không tìm thấy tài khoản với Email này!";
+            TempData["ErrorMessage"] = "Email không tồn tại!";
             return View();
         }
 
-        // Tự động mark các OTP quên pass cũ của email này thành hết hạn (tuỳ chọn)
-        var oldOtps = await _db.OtpRecords.Where(o => o.Email == email && o.Purpose == "ResetPassword" && !o.IsUsed).ToListAsync();
-        foreach (var o in oldOtps) o.IsUsed = true;
+        // chống spam OTP (60s)
+        var lastOtp = await _db.OtpRecords
+            .Where(o => o.Email == email && o.Purpose == "ResetPassword")
+            .OrderByDescending(o => o.Id)
+            .FirstOrDefaultAsync();
 
-        var random = new Random();
-        var code = random.Next(100000, 999999).ToString();
-        var otp = new OtpRecord {
+        if (lastOtp != null && lastOtp.ExpiryTime > DateTimeOffset.UtcNow.AddMinutes(-9))
+        {
+            TempData["ErrorMessage"] = "Vui lòng đợi trước khi gửi OTP mới!";
+            return View();
+        }
+
+        var code = new Random().Next(100000, 999999).ToString();
+
+        _db.OtpRecords.Add(new OtpRecord
+        {
             Email = email,
             Code = code,
-            ExpiryTime = DateTime.UtcNow.AddMinutes(10),
+            ExpiryTime = DateTimeOffset.UtcNow.AddMinutes(10),
             Purpose = "ResetPassword"
-        };
-        _db.OtpRecords.Add(otp);
+        });
+
         await _db.SaveChangesAsync();
 
-        await _emailService.SendEmailAsync(email, "Mã khôi phục mật khẩu - Chuỗi", $"Mã OTP để khôi phục mật khẩu của bạn là: <b>{code}</b>. Mã có hiệu lực trong 10 phút.");
+        await _emailService.SendEmailAsync(
+     email,
+     "Mã OTP đăng ký",
+     $"Mã OTP của bạn là: <b>{code}</b>. Có hiệu lực 10 phút."
+ );
 
-        TempData["SuccessMessage"] = "Mã xác nhận đã được gửi vào Email của bạn.";
-        return RedirectToAction("ResetPassword", new { email = email });
+        TempData["SuccessMessage"] = "OTP đã gửi!";
+        return RedirectToAction("ResetPassword", new { email });
     }
 
+    // ================= RESET PASSWORD =================
     [HttpGet]
     public IActionResult ResetPassword(string email)
     {
@@ -216,37 +225,64 @@ public class AuthController : Controller
     {
         if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 6)
         {
-            TempData["ErrorMessage"] = "Mật khẩu phải từ 6 ký tự trở lên!";
+            TempData["ErrorMessage"] = "Mật khẩu >= 6 ký tự!";
             ViewBag.Email = email;
             return View();
         }
 
-        var otp = await _db.OtpRecords.FirstOrDefaultAsync(o => o.Email == email && o.Code == code && o.Purpose == "ResetPassword" && !o.IsUsed);
-        
-        if (otp == null || otp.ExpiryTime < DateTime.UtcNow)
+        var otp = await _db.OtpRecords
+            .FirstOrDefaultAsync(o => o.Email == email && o.Code == code && !o.IsUsed && o.Purpose == "ResetPassword");
+
+        if (otp == null || otp.ExpiryTime < DateTimeOffset.UtcNow)
         {
-            TempData["ErrorMessage"] = "Mã OTP không hợp lệ hoặc đã hết hạn!";
+            TempData["ErrorMessage"] = "OTP không hợp lệ!";
             ViewBag.Email = email;
             return View();
         }
 
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == email);
-        if (user != null)
-        {
-            var hasher = new PasswordHasher<User>();
-            user.Password = hasher.HashPassword(user, newPassword);
-            otp.IsUsed = true;
-            await _db.SaveChangesAsync();
-            TempData["SuccessMessage"] = "Đổi mật khẩu thành công! Vui lòng đăng nhập bằng mật khẩu mới.";
-            return RedirectToAction("Login");
-        }
+        if (user == null) return RedirectToAction("Login");
 
+        var hasher = new PasswordHasher<User>();
+        user.Password = hasher.HashPassword(user, newPassword);
+
+        otp.IsUsed = true;
+
+        await _db.SaveChangesAsync();
+
+        TempData["SuccessMessage"] = "Đổi mật khẩu thành công!";
         return RedirectToAction("Login");
     }
 
+    // ================= LOGOUT =================
     public async Task<IActionResult> Logout()
     {
-        await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        await HttpContext.SignOutAsync();
         return RedirectToAction("Login");
+    }
+
+    // ================= PRIVATE =================
+    private async Task SignInUser(User user)
+    {
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.Name, user.Username),
+            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new Claim(ClaimTypes.Role, user.RoleId == 1 ? "Admin" : "User"),
+            new Claim("DisplayName", user.DisplayName),
+            new Claim("RoleId", user.RoleId.ToString())
+        };
+
+        if (!string.IsNullOrEmpty(user.AvatarUrl))
+            claims.Add(new Claim("AvatarUrl", user.AvatarUrl));
+
+        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+
+        await HttpContext.SignOutAsync();
+
+        await HttpContext.SignInAsync(
+            CookieAuthenticationDefaults.AuthenticationScheme,
+            new ClaimsPrincipal(identity),
+            new AuthenticationProperties { IsPersistent = true });
     }
 }

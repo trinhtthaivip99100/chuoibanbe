@@ -10,5 +10,5 @@ public class User {
     public int RoleId { get; set; } = 2; // 1 = Admin, 2 = User
     public bool IsLocked { get; set; } = false;
     public string? LockReason { get; set; }
-    public System.DateTime CreatedAt { get; set; } = System.DateTime.UtcNow;
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }

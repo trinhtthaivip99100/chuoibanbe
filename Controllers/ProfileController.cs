@@ -5,8 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using KetBanChoiChuoi.Data;
 using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using CloudinaryDotNet;
@@ -19,111 +17,154 @@ public class ProfileController : Controller
 {
     private readonly AppDbContext _db;
     private readonly Cloudinary _cloudinary;
-    public ProfileController(AppDbContext db, Cloudinary cloudinary) 
-    { 
-        _db = db; 
+
+    public ProfileController(AppDbContext db, Cloudinary cloudinary)
+    {
+        _db = db;
         _cloudinary = cloudinary;
     }
 
+    private int MyId() => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+    // ================= VIEW PROFILE =================
     [HttpGet]
     public async Task<IActionResult> Index()
     {
-        int myId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        var user = await _db.Users.FindAsync(myId);
+        var user = await _db.Users.FindAsync(MyId());
         return View(user);
     }
 
+    // ================= UPDATE PROFILE =================
     [HttpPost]
     public async Task<IActionResult> Update(string username, string displayName, IFormFile? avatarFile)
     {
-        int myId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        var user = await _db.Users.FindAsync(myId);
+        var user = await _db.Users.FindAsync(MyId());
         if (user == null) return RedirectToAction("Index", "Home");
 
+        // validate
         if (string.IsNullOrWhiteSpace(username) || username.Length < 5)
         {
-            ViewBag.Error = "Mã ID phải từ 5 ký tự trở lên!";
-            return View("Index", user);
-        }
-        if (string.IsNullOrWhiteSpace(displayName) || displayName.Length > 15)
-        {
-            ViewBag.Error = "Tên hiển thị không được vượt quá 15 ký tự!";
-            return View("Index", user);
+            TempData["Error"] = "ID phải >= 5 ký tự!";
+            return RedirectToAction("Index");
         }
 
+        if (string.IsNullOrWhiteSpace(displayName) || displayName.Length > 15)
+        {
+            TempData["Error"] = "Tên hiển thị tối đa 15 ký tự!";
+            return RedirectToAction("Index");
+        }
+
+        // check username trùng
         if (user.Username != username)
         {
-            if (await _db.Users.AnyAsync(u => u.Username == username))
+            bool exists = await _db.Users.AnyAsync(u => u.Username == username);
+            if (exists)
             {
-                ViewBag.Error = "ID (Tên đăng nhập) đã có người sử dụng. Vui lòng chọn ID khác!";
-                return View("Index", user);
+                TempData["Error"] = "ID đã tồn tại!";
+                return RedirectToAction("Index");
             }
             user.Username = username;
         }
 
         user.DisplayName = displayName;
 
+        // ================= AVATAR =================
         if (avatarFile != null && avatarFile.Length > 0)
         {
-            if (!string.IsNullOrEmpty(user.AvatarUrl))
+            // check type
+            var allowedTypes = new[] { "image/jpeg", "image/png", "image/webp" };
+            if (!allowedTypes.Contains(avatarFile.ContentType))
             {
-                int folderIndex = user.AvatarUrl.IndexOf("img/chuoibanbe/avatar/");
-                if (folderIndex != -1)
-                {
-                    string publicIdWithExt = user.AvatarUrl.Substring(folderIndex);
-                    int lastDotIndex = publicIdWithExt.LastIndexOf('.');
-                    string publicId = lastDotIndex != -1 ? publicIdWithExt.Substring(0, lastDotIndex) : publicIdWithExt;
-                    await _cloudinary.DestroyAsync(new DeletionParams(publicId) { Invalidate = true });
-                }
+                TempData["Error"] = "Chỉ cho phép JPG, PNG, WEBP!";
+                return RedirectToAction("Index");
             }
 
+            // check size (2MB)
+            if (avatarFile.Length > 2 * 1024 * 1024)
+            {
+                TempData["Error"] = "Ảnh tối đa 2MB!";
+                return RedirectToAction("Index");
+            }
+
+            // xóa ảnh cũ (nếu có)
+            if (!string.IsNullOrEmpty(user.AvatarUrl))
+            {
+                try
+                {
+                    int index = user.AvatarUrl.IndexOf("img/chuoibanbe/avatar/");
+                    if (index != -1)
+                    {
+                        string publicId = user.AvatarUrl.Substring(index);
+                        int dot = publicId.LastIndexOf('.');
+                        if (dot != -1) publicId = publicId.Substring(0, dot);
+
+                        await _cloudinary.DestroyAsync(new DeletionParams(publicId)
+                        {
+                            Invalidate = true
+                        });
+                    }
+                }
+                catch { /* bỏ qua lỗi xóa ảnh */ }
+            }
+
+            // upload mới
             using var stream = avatarFile.OpenReadStream();
             var uploadParams = new ImageUploadParams
             {
                 File = new FileDescription(avatarFile.FileName, stream),
                 Folder = "img/chuoibanbe/avatar"
             };
-            var uploadResult = await _cloudinary.UploadAsync(uploadParams);
-            user.AvatarUrl = uploadResult.SecureUrl.ToString();
+
+            var result = await _cloudinary.UploadAsync(uploadParams);
+
+            user.AvatarUrl = result.SecureUrl.ToString();
         }
 
         await _db.SaveChangesAsync();
 
+        // ================= REFRESH CLAIM =================
         var claims = new List<Claim>
         {
             new Claim(ClaimTypes.Name, user.Username),
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim("DisplayName", user.DisplayName)
+            new Claim(ClaimTypes.Role, user.RoleId == 1 ? "Admin" : "User"),
+            new Claim("DisplayName", user.DisplayName),
+            new Claim("RoleId", user.RoleId.ToString())
         };
+
         if (!string.IsNullOrEmpty(user.AvatarUrl))
-        {
             claims.Add(new Claim("AvatarUrl", user.AvatarUrl));
-        }
 
         var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-        await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));
 
-        ViewBag.Success = "Cập nhật hồ sơ thành công!";
-        return View("Index", user);
+        await HttpContext.SignOutAsync();
+
+        await HttpContext.SignInAsync(
+            CookieAuthenticationDefaults.AuthenticationScheme,
+            new ClaimsPrincipal(identity),
+            new AuthenticationProperties { IsPersistent = true });
+
+        TempData["Success"] = "Cập nhật thành công!";
+        return RedirectToAction("Index");
     }
 
+    // ================= CHANGE PASSWORD =================
     [HttpPost]
     public async Task<IActionResult> ChangePassword(string oldPassword, string newPassword, string confirmPassword)
     {
-        int myId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        var user = await _db.Users.FindAsync(myId);
+        var user = await _db.Users.FindAsync(MyId());
         if (user == null) return RedirectToAction("Index", "Home");
 
         if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 6)
         {
-            ViewBag.Error = "Mật khẩu mới phải từ 6 ký tự trở lên!";
-            return View("Index", user);
+            TempData["Error"] = "Mật khẩu >= 6 ký tự!";
+            return RedirectToAction("Index");
         }
 
         if (newPassword != confirmPassword)
         {
-            ViewBag.Error = "Xác nhận mật khẩu không khớp!";
-            return View("Index", user);
+            TempData["Error"] = "Mật khẩu không khớp!";
+            return RedirectToAction("Index");
         }
 
         var hasher = new PasswordHasher<KetBanChoiChuoi.Models.User>();
@@ -131,14 +172,17 @@ public class ProfileController : Controller
 
         if (result == PasswordVerificationResult.Failed)
         {
-            ViewBag.Error = "Mật khẩu cũ không chính xác!";
-            return View("Index", user);
+            TempData["Error"] = "Mật khẩu cũ sai!";
+            return RedirectToAction("Index");
         }
 
         user.Password = hasher.HashPassword(user, newPassword);
         await _db.SaveChangesAsync();
 
-        ViewBag.Success = "Đổi mật khẩu thành công!";
-        return View("Index", user);
+        // logout sau khi đổi pass
+        await HttpContext.SignOutAsync();
+
+        TempData["Success"] = "Đổi mật khẩu thành công! Vui lòng đăng nhập lại.";
+        return RedirectToAction("Login", "Auth");
     }
 }

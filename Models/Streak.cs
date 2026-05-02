@@ -7,5 +7,5 @@ public class Streak {
     public int RecoveriesLeft { get; set; } = 5;
     public bool User1CheckedInToday { get; set; } = false;
     public bool User2CheckedInToday { get; set; } = false;
-    public System.DateTime LastStreakDate { get; set; } = System.DateTime.UtcNow.Date.AddDays(-1);
+    public DateTimeOffset LastStreakDate { get; set; }
 }

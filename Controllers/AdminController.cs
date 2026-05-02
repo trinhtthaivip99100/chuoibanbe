@@ -2,10 +2,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using KetBanChoiChuoi.Data;
 using Microsoft.EntityFrameworkCore;
-using System.Threading.Tasks;
-using System.Linq;
 using Microsoft.AspNetCore.SignalR;
 using KetBanChoiChuoi.Hubs;
+using CloudinaryDotNet;
+using CloudinaryDotNet.Actions;
 
 namespace KetBanChoiChuoi.Controllers;
 
@@ -13,23 +13,27 @@ namespace KetBanChoiChuoi.Controllers;
 public class AdminController : Controller
 {
     private readonly AppDbContext _db;
-    private readonly IHubContext<NotificationHub> _hubContext;
-    private readonly CloudinaryDotNet.Cloudinary _cloudinary;
+    private readonly IHubContext<NotificationHub> _hub;
+    private readonly Cloudinary _cloudinary;
 
-    public AdminController(AppDbContext db, IHubContext<NotificationHub> hubContext, CloudinaryDotNet.Cloudinary cloudinary)
+    public AdminController(AppDbContext db, IHubContext<NotificationHub> hub, Cloudinary cloudinary)
     {
         _db = db;
-        _hubContext = hubContext;
+        _hub = hub;
         _cloudinary = cloudinary;
     }
 
+    // ================= DASHBOARD =================
     public async Task<IActionResult> Index()
     {
         ViewBag.TotalUsers = await _db.Users.CountAsync();
         ViewBag.ActiveUsers = await _db.Users.CountAsync(u => !u.IsLocked);
         ViewBag.TotalConnections = await _db.Friendships.CountAsync(f => f.Status == 1);
 
-        var users = await _db.Users.OrderByDescending(u => u.CreatedAt).ToListAsync();
+        var users = await _db.Users
+            .OrderByDescending(u => u.CreatedAt)
+            .ToListAsync();
+
         var friendships = await _db.Friendships
             .Include(f => f.User1)
             .Include(f => f.User2)
@@ -37,149 +41,233 @@ public class AdminController : Controller
             .OrderByDescending(f => f.CreatedAt)
             .ToListAsync();
 
+        var streaks = await _db.Streaks.ToListAsync();
+
+        var pets = await _db.Pets
+            .OrderBy(p => p.RequiredStreak)
+            .ToListAsync();
+
         ViewBag.Friendships = friendships;
-        ViewBag.Streaks = await _db.Streaks.ToListAsync();
-        ViewBag.Pets = await _db.Pets.OrderBy(p => p.RequiredStreak).ToListAsync();
+        ViewBag.Streaks = streaks;
+        ViewBag.Pets = pets;
+
         return View(users);
     }
 
+    // ================= LOCK USER =================
     [HttpPost]
-    public async Task<IActionResult> LockUser(int id, string reason)
+    public async Task<IActionResult> LockUser(int id, string? reason)
     {
         var user = await _db.Users.FindAsync(id);
-        if (user != null && user.RoleId != 1) // Ngăn khóa Admin khác
+
+        if (user != null && user.RoleId != 1)
         {
             user.IsLocked = true;
-            user.LockReason = string.IsNullOrWhiteSpace(reason) ? "Vi phạm nội quy" : reason;
+            user.LockReason = string.IsNullOrWhiteSpace(reason)
+                ? "Vi phạm nội quy"
+                : reason;
+
             await _db.SaveChangesAsync();
-            await _hubContext.Clients.User(id.ToString()).SendAsync("ForceLogout");
-            TempData["SuccessMessage"] = $"Đã khóa tài khoản {user.Username}!";
+
+            // force logout realtime
+            await _hub.Clients.User(id.ToString()).SendAsync("ForceLogout");
+
+            TempData["Success"] = $"Đã khóa {user.Username}";
         }
+
         return RedirectToAction("Index");
     }
 
+    // ================= UNLOCK USER =================
     [HttpPost]
     public async Task<IActionResult> UnlockUser(int id)
     {
         var user = await _db.Users.FindAsync(id);
+
         if (user != null)
         {
             user.IsLocked = false;
             user.LockReason = null;
+
             await _db.SaveChangesAsync();
-            TempData["SuccessMessage"] = $"Đã mở khóa tài khoản {user.Username}!";
+
+            TempData["Success"] = $"Đã mở khóa {user.Username}";
         }
+
         return RedirectToAction("Index");
     }
 
+    // ================= UPDATE STREAK =================
     [HttpPost]
-    public async Task<IActionResult> UpdateStreak(int friendshipId, int currentStreakCount)
+    public async Task<IActionResult> UpdateStreak(int friendshipId, int count)
     {
-        var streak = await _db.Streaks.FirstOrDefaultAsync(s => s.FriendshipId == friendshipId);
+        var streak = await _db.Streaks
+            .FirstOrDefaultAsync(s => s.FriendshipId == friendshipId);
+
         if (streak != null)
         {
-            streak.CurrentStreakCount = currentStreakCount;
+            streak.CurrentStreakCount = Math.Max(0, count);
             await _db.SaveChangesAsync();
-            TempData["SuccessMessage"] = $"Đã cập nhật số ngày chuỗi thành {currentStreakCount}!";
+
+            TempData["Success"] = "Đã cập nhật streak!";
         }
+
         return RedirectToAction("Index");
     }
 
+    // ================= ADD PET =================
     [HttpPost]
-    public async Task<IActionResult> AddPet(string name, int requiredStreak, Microsoft.AspNetCore.Http.IFormFile image)
+    public async Task<IActionResult> AddPet(string name, int requiredStreak, IFormFile image)
     {
-        if(string.IsNullOrEmpty(name) || image == null) return RedirectToAction("Index");
-
-        bool exists = await _db.Pets.AnyAsync(p => p.Name.ToLower() == name.ToLower() || p.RequiredStreak == requiredStreak);
-        if (exists)
+        if (string.IsNullOrWhiteSpace(name) || image == null)
         {
-            TempData["ErrorMessage"] = "Tên thú cưng hoặc Mốc chuỗi này đã tồn tại! Vui lòng chọn giá trị khác.";
+            TempData["Error"] = "Thiếu dữ liệu!";
             return RedirectToAction("Index");
         }
 
-        var uploadResult = new CloudinaryDotNet.Actions.ImageUploadResult();
-        using (var stream = image.OpenReadStream())
+        // check trùng
+        bool exists = await _db.Pets.AnyAsync(p =>
+            p.Name.ToLower() == name.ToLower() ||
+            p.RequiredStreak == requiredStreak);
+
+        if (exists)
         {
-            var uploadParams = new CloudinaryDotNet.Actions.ImageUploadParams()
-            {
-                File = new CloudinaryDotNet.FileDescription(image.FileName, stream),
-                Folder = "img/chuoibanbe/pets"
-            };
-            uploadResult = await _cloudinary.UploadAsync(uploadParams);
+            TempData["Error"] = "Tên hoặc mốc streak đã tồn tại!";
+            return RedirectToAction("Index");
         }
-        
-        var pet = new Models.Pet {
+
+        // validate file
+        var allowed = new[] { "image/jpeg", "image/png", "image/webp" };
+        if (!allowed.Contains(image.ContentType))
+        {
+            TempData["Error"] = "Ảnh không hợp lệ!";
+            return RedirectToAction("Index");
+        }
+
+        if (image.Length > 2 * 1024 * 1024)
+        {
+            TempData["Error"] = "Ảnh tối đa 2MB!";
+            return RedirectToAction("Index");
+        }
+
+        // upload cloudinary
+        using var stream = image.OpenReadStream();
+
+        var upload = await _cloudinary.UploadAsync(new ImageUploadParams
+        {
+            File = new FileDescription(image.FileName, stream),
+            Folder = "img/chuoibanbe/pets",
+            Transformation = new Transformation()
+                .Width(300).Height(300).Crop("fill")
+        });
+
+        var pet = new KetBanChoiChuoi.Models.Pet
+        {
             Name = name,
             RequiredStreak = requiredStreak,
-            ImageUrl = uploadResult.SecureUrl.ToString()
+            ImageUrl = upload.SecureUrl.ToString()
         };
+
         _db.Pets.Add(pet);
         await _db.SaveChangesAsync();
-        TempData["SuccessMessage"] = $"Đã thêm thú cưng: {name}!";
+
+        TempData["Success"] = $"Đã thêm pet {name}";
         return RedirectToAction("Index");
     }
 
+    // ================= DELETE PET =================
     [HttpPost]
     public async Task<IActionResult> DeletePet(int id)
     {
         var pet = await _db.Pets.FindAsync(id);
-        if(pet != null)
+
+        if (pet != null)
         {
-            int folderIndex = pet.ImageUrl.IndexOf("img/chuoibanbe/pets/");
-            if (folderIndex != -1)
+            try
             {
-                string publicIdWithExt = pet.ImageUrl.Substring(folderIndex);
-                int lastDotIndex = publicIdWithExt.LastIndexOf('.');
-                string publicId = lastDotIndex != -1 ? publicIdWithExt.Substring(0, lastDotIndex) : publicIdWithExt;
-                await _cloudinary.DestroyAsync(new CloudinaryDotNet.Actions.DeletionParams(publicId) { Invalidate = true });
+                int index = pet.ImageUrl.IndexOf("img/chuoibanbe/pets/");
+                if (index != -1)
+                {
+                    string publicId = pet.ImageUrl.Substring(index);
+                    int dot = publicId.LastIndexOf('.');
+                    if (dot != -1) publicId = publicId.Substring(0, dot);
+
+                    await _cloudinary.DestroyAsync(new DeletionParams(publicId)
+                    {
+                        Invalidate = true
+                    });
+                }
             }
+            catch { }
+
             _db.Pets.Remove(pet);
             await _db.SaveChangesAsync();
-            TempData["SuccessMessage"] = "Đã xóa thú cưng thành công!";
+
+            TempData["Success"] = "Đã xóa pet!";
         }
+
         return RedirectToAction("Index");
     }
 
+    // ================= EDIT PET =================
     [HttpPost]
-    public async Task<IActionResult> EditPet(int id, string name, int requiredStreak, Microsoft.AspNetCore.Http.IFormFile? image)
+    public async Task<IActionResult> EditPet(int id, string name, int requiredStreak, IFormFile? image)
     {
         var pet = await _db.Pets.FindAsync(id);
         if (pet == null) return RedirectToAction("Index");
 
-        bool exists = await _db.Pets.AnyAsync(p => p.Id != id && (p.Name.ToLower() == name.ToLower() || p.RequiredStreak == requiredStreak));
+        bool exists = await _db.Pets.AnyAsync(p =>
+            p.Id != id &&
+            (p.Name.ToLower() == name.ToLower() ||
+             p.RequiredStreak == requiredStreak));
+
         if (exists)
         {
-            TempData["ErrorMessage"] = "Tên thú cưng hoặc Mốc chuỗi này đã bị trùng với thú cưng khác! Vui lòng chọn giá trị khác.";
+            TempData["Error"] = "Trùng tên hoặc mốc streak!";
             return RedirectToAction("Index");
-        }
-
-        if (image != null)
-        {
-            int folderIndex = pet.ImageUrl.IndexOf("img/chuoibanbe/pets/");
-            if (folderIndex != -1)
-            {
-                string publicIdWithExt = pet.ImageUrl.Substring(folderIndex);
-                int lastDotIndex = publicIdWithExt.LastIndexOf('.');
-                string publicId = lastDotIndex != -1 ? publicIdWithExt.Substring(0, lastDotIndex) : publicIdWithExt;
-                await _cloudinary.DestroyAsync(new CloudinaryDotNet.Actions.DeletionParams(publicId) { Invalidate = true });
-            }
-
-            using (var stream = image.OpenReadStream())
-            {
-                var uploadParams = new CloudinaryDotNet.Actions.ImageUploadParams()
-                {
-                    File = new CloudinaryDotNet.FileDescription(image.FileName, stream),
-                    Folder = "img/chuoibanbe/pets"
-                };
-                var uploadResult = await _cloudinary.UploadAsync(uploadParams);
-                pet.ImageUrl = uploadResult.SecureUrl.ToString();
-            }
         }
 
         pet.Name = name;
         pet.RequiredStreak = requiredStreak;
+
+        if (image != null && image.Length > 0)
+        {
+            var allowed = new[] { "image/jpeg", "image/png", "image/webp" };
+            if (!allowed.Contains(image.ContentType))
+            {
+                TempData["Error"] = "Ảnh không hợp lệ!";
+                return RedirectToAction("Index");
+            }
+
+            // xóa ảnh cũ
+            try
+            {
+                int index = pet.ImageUrl.IndexOf("img/chuoibanbe/pets/");
+                if (index != -1)
+                {
+                    string publicId = pet.ImageUrl.Substring(index);
+                    int dot = publicId.LastIndexOf('.');
+                    if (dot != -1) publicId = publicId.Substring(0, dot);
+
+                    await _cloudinary.DestroyAsync(new DeletionParams(publicId));
+                }
+            }
+            catch { }
+
+            using var stream = image.OpenReadStream();
+
+            var upload = await _cloudinary.UploadAsync(new ImageUploadParams
+            {
+                File = new FileDescription(image.FileName, stream),
+                Folder = "img/chuoibanbe/pets"
+            });
+
+            pet.ImageUrl = upload.SecureUrl.ToString();
+        }
+
         await _db.SaveChangesAsync();
-        TempData["SuccessMessage"] = $"Đã cập nhật thú cưng: {name}!";
+
+        TempData["Success"] = "Cập nhật pet thành công!";
         return RedirectToAction("Index");
     }
 }
