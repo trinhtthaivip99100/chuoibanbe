@@ -72,17 +72,17 @@ public class ProfileController : Controller
         if (avatarFile != null && avatarFile.Length > 0)
         {
             // check type
-            var allowedTypes = new[] { "image/jpeg", "image/png", "image/webp" };
+            var allowedTypes = new[] { "image/jpeg", "image/png", "image/webp", "image/gif" };
             if (!allowedTypes.Contains(avatarFile.ContentType))
             {
-                TempData["Error"] = "Chỉ cho phép JPG, PNG, WEBP!";
+                TempData["Error"] = "Chỉ cho phép JPG, PNG, WEBP, GIF!";
                 return RedirectToAction("Index");
             }
 
-            // check size (2MB)
-            if (avatarFile.Length > 2 * 1024 * 1024)
+            // check size (5MB vì GIF thường nặng hơn)
+            if (avatarFile.Length > 5 * 1024 * 1024)
             {
-                TempData["Error"] = "Ảnh tối đa 2MB!";
+                TempData["Error"] = "Ảnh tối đa 5MB!";
                 return RedirectToAction("Index");
             }
 
@@ -112,7 +112,7 @@ public class ProfileController : Controller
             var uploadParams = new ImageUploadParams
             {
                 File = new FileDescription(avatarFile.FileName, stream),
-                Folder = "img/chuoibanbe/avatar"
+                Folder = "img/chuoibanbe/avatar",
             };
 
             var result = await _cloudinary.UploadAsync(uploadParams);
