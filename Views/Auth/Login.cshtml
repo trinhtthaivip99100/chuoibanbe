@@ -1,0 +1,16 @@
+@{ ViewData["Title"] = "Đăng nhập"; }
+<div class="glass-card" style="max-width: 400px; margin: 2rem auto;">
+    <h2 class="text-center mb-4">Đăng Nhập</h2>
+    @if(ViewBag.Error != null) { <p style="color: #ef4444; text-align: center;">@ViewBag.Error</p> }
+    <form method="post" action="/Auth/Login">
+        <div class="mb-4">
+            <input type="email" name="email" placeholder="Địa chỉ Email" style="box-sizing: border-box; width: 100%; padding: 1rem; border-radius: 12px; border: none; background: rgba(0,0,0,0.2); color: white; margin-bottom: 1rem;" required />
+            <input type="password" name="password" placeholder="Mật khẩu" style="box-sizing: border-box; width: 100%; padding: 1rem; border-radius: 12px; border: none; background: rgba(0,0,0,0.2); color: white;" required />
+        </div>
+        <div style="text-align: right; margin-bottom: 1rem;">
+            <a href="/Auth/ForgotPassword" style="color: #a855f7; font-size: 0.9rem; text-decoration: none;">Quên mật khẩu?</a>
+        </div>
+        <button type="submit" class="btn-glow" style="width: 100%;">Vào Game</button>
+    </form>
+    <p class="text-center mt-4" style="margin-top: 1.5rem;">Chưa có tài khoản? <a href="/Auth/Register" style="color: var(--accent-primary);">Đăng ký</a></p>
+</div>

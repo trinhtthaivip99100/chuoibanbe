@@ -1,0 +1,15 @@
+@{ ViewData["Title"] = "Xác nhận OTP"; }
+<div class="glass-card" style="max-width: 400px; margin: 2rem auto;">
+    <h2 class="text-center mb-4" style="color: #10b981;">Xác Nhận Email</h2>
+    <p class="text-center" style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 2rem;">Vui lòng nhập mã OTP gồm 6 chữ số vừa được gửi đến <b>@ViewBag.Email</b></p>
+    
+    @if(ViewBag.Error != null) { <p style="color: #ef4444; text-align: center;">@ViewBag.Error</p> }
+    
+    <form method="post" action="/Auth/VerifyOtp">
+        <input type="hidden" name="email" value="@ViewBag.Email" />
+        <div class="mb-4">
+            <input type="text" name="code" placeholder="Nhập mã OTP 6 số" maxlength="6" style="box-sizing: border-box; width: 100%; padding: 1rem; border-radius: 12px; border: none; background: rgba(0,0,0,0.2); color: white; text-align: center; font-size: 1.5rem; letter-spacing: 5px; font-weight: bold;" required autocomplete="off" />
+        </div>
+        <button type="submit" class="btn-glow" style="width: 100%; background: #10b981; box-shadow: 0 0 15px rgba(16,185,129,0.3);">Xác Nhận</button>
+    </form>
+</div>

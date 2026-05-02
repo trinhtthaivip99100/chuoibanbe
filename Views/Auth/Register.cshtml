@@ -1,0 +1,15 @@
+@{ ViewData["Title"] = "Đăng ký"; }
+<div class="glass-card" style="max-width: 400px; margin: 2rem auto;">
+    <h2 class="text-center mb-4">Đăng Ký</h2>
+    @if(ViewBag.Error != null) { <p style="color: #ef4444; text-align: center;">@ViewBag.Error</p> }
+    <form method="post" action="/Auth/Register">
+        <div class="mb-4">
+            <input type="text" name="username" placeholder="Mã ID (Tối thiểu 5 ký tự, không phân biệt hoa thường)" minlength="5" style="box-sizing: border-box; width: 100%; padding: 1rem; border-radius: 12px; border: none; background: rgba(0,0,0,0.2); color: white; margin-bottom: 1rem;" required />
+            <input type="email" name="email" placeholder="Địa chỉ Email (Dùng để đăng nhập)" style="box-sizing: border-box; width: 100%; padding: 1rem; border-radius: 12px; border: none; background: rgba(0,0,0,0.2); color: white; margin-bottom: 1rem;" required />
+            <input type="text" name="displayName" placeholder="Tên hiển thị (Tối đa 15 ký tự)" maxlength="15" style="box-sizing: border-box; width: 100%; padding: 1rem; border-radius: 12px; border: none; background: rgba(0,0,0,0.2); color: white; margin-bottom: 1rem;" required />
+            <input type="password" name="password" placeholder="Mật khẩu (Tối thiểu 6 ký tự)" minlength="6" style="box-sizing: border-box; width: 100%; padding: 1rem; border-radius: 12px; border: none; background: rgba(0,0,0,0.2); color: white;" required />
+        </div>
+        <button type="submit" class="btn-glow" style="width: 100%;">Tạo Tài Khoản</button>
+    </form>
+    <p class="text-center mt-4" style="margin-top: 1.5rem;">Đã có tài khoản? <a href="/Auth/Login" style="color: var(--accent-primary);">Đăng nhập</a></p>
+</div>

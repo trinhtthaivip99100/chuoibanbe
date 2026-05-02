@@ -1,0 +1,581 @@
+@{ Layout = null; }
+@model List<KetBanChoiChuoi.Models.User>
+@{
+    var friendships = ViewBag.Friendships as List<KetBanChoiChuoi.Models.Friendship>;
+    var streaks = ViewBag.Streaks as List<KetBanChoiChuoi.Models.Streak>;
+    var pets = ViewBag.Pets as List<KetBanChoiChuoi.Models.Pet>;
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0; padding: 0;
+            background: #0f111a;
+            color: #fff;
+            font-family: 'Outfit', sans-serif;
+            overflow-x: hidden;
+        }
+        /* Background glows */
+        .bg-glow-1 { position: fixed; top: -100px; right: -100px; width: 400px; height: 400px; background: rgba(168, 85, 247, 0.4); border-radius: 50%; filter: blur(100px); z-index: -1; pointer-events: none; }
+        .bg-glow-2 { position: fixed; bottom: -100px; left: -100px; width: 400px; height: 400px; background: rgba(56, 189, 248, 0.4); border-radius: 50%; filter: blur(100px); z-index: -1; pointer-events: none; }
+
+        .dashboard-container {
+            display: flex;
+            height: 100vh;
+            padding: 1rem;
+            box-sizing: border-box;
+            gap: 1.5rem;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 250px;
+            background: rgba(30, 41, 59, 0.5);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            flex-direction: column;
+            padding: 2rem 1.5rem;
+            box-sizing: border-box;
+        }
+        .sidebar-logo {
+            font-size: 1.8rem; font-weight: 700; margin-bottom: 3rem; display: flex; align-items: center; gap: 0.5rem;
+        }
+        .nav-item {
+            padding: 1rem; margin-bottom: 0.5rem; border-radius: 12px; cursor: pointer; transition: 0.3s;
+            display: flex; align-items: center; gap: 1rem; color: #cbd5e1; font-weight: 500;
+        }
+        .nav-item:hover, .nav-item.active {
+            background: rgba(255, 255, 255, 0.1); color: #fff;
+        }
+        .sidebar-logout {
+            margin-top: auto;
+            background: linear-gradient(45deg, #a855f7, #3b82f6);
+            border: none; border-radius: 12px; padding: 1rem; color: white; font-weight: 600; cursor: pointer; text-align: center; text-decoration: none; display: block;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 1rem;
+        }
+        .main-content::-webkit-scrollbar { width: 6px; }
+        .main-content::-webkit-scrollbar-track { background: transparent; }
+        .main-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+
+        .header {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;
+        }
+        .search-bar {
+            background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255,255,255,0.1); padding: 0.8rem 1.5rem; border-radius: 30px; color: white; width: 300px; outline: none; font-family: inherit;
+        }
+
+        /* Cards */
+        .stats-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: rgba(30, 41, 59, 0.4);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .stat-card::after {
+            content: ''; position: absolute; bottom: -50px; right: -50px; width: 150px; height: 150px; background: radial-gradient(circle, rgba(168,85,247,0.8) 0%, transparent 70%); filter: blur(30px);
+        }
+        .stat-card:nth-child(2)::after { background: radial-gradient(circle, rgba(56,189,248,0.8) 0%, transparent 70%); }
+        .stat-card:nth-child(3)::after { background: radial-gradient(circle, rgba(236,72,153,0.8) 0%, transparent 70%); }
+        
+        .stat-title { font-size: 1rem; color: #cbd5e1; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; font-weight: 500;}
+        .stat-value { font-size: 2.8rem; font-weight: 700; margin: 0; }
+
+        /* Tables */
+        .panel {
+            background: rgba(30, 41, 59, 0.4);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            display: none;
+        }
+        .panel.active { display: block; }
+        
+        .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .panel-title { font-size: 1.2rem; font-weight: 600; margin: 0; }
+
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { padding: 1rem; color: #94a3b8; font-weight: 500; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        td { padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        
+        .badge { padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.8rem; font-weight: 500; }
+        .badge-success { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+        .badge-danger { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+
+        .btn-action { padding: 0.4rem 1rem; border-radius: 8px; border: none; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: white; transition: 0.2s; }
+        .btn-lock { background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #ef4444; }
+        .btn-lock:hover { background: #ef4444; color: white; }
+        .btn-unlock { background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #10b981; }
+        .btn-unlock:hover { background: #10b981; color: white; }
+        .btn-edit { background: rgba(56, 189, 248, 0.2); border: 1px solid #38bdf8; color: #38bdf8; }
+        .btn-edit:hover { background: #38bdf8; color: white; }
+
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+        .modal-box { background: #1e293b; padding: 2rem; border-radius: 20px; width: 400px; border: 1px solid rgba(255,255,255,0.1); }
+        .modal-input { width: 100%; padding: 0.8rem; margin: 1rem 0; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); color: white; box-sizing: border-box; font-family: inherit;}
+    </style>
+</head>
+<body>
+    <div class="bg-glow-1"></div>
+    <div class="bg-glow-2"></div>
+
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-logo">
+                <span style="color: #a855f7;">●</span> Adminly
+            </div>
+            <div class="nav-item active" onclick="switchTab('dashboard')">📊 Dashboard</div>
+            <div class="nav-item" onclick="switchTab('users')">👥 Danh sách Users</div>
+            <div class="nav-item" onclick="switchTab('connections')">🔗 Mạng lưới Chuỗi</div>
+            <div class="nav-item" onclick="switchTab('pets')">🐾 Quản lý Thú Cưng</div>
+            
+            <a href="/Home/Index" class="sidebar-logout" style="background: transparent; border: 1px solid rgba(255,255,255,0.2); margin-top: auto; margin-bottom: 1rem;">Về Trang Chủ</a>
+            <a href="/Auth/Logout" class="sidebar-logout" style="margin-top: 0;">Logout</a>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="header">
+                <h2>Dashboard Overview</h2>
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    @if(TempData["SuccessMessage"] != null) {
+                        <span style="color: #10b981; font-weight: 500;">✓ @TempData["SuccessMessage"]</span>
+                    }
+                    @if(TempData["ErrorMessage"] != null) {
+                        <span style="color: #ef4444; font-weight: 500; background: rgba(239, 68, 68, 0.2); padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid #ef4444;">❌ @TempData["ErrorMessage"]</span>
+                        <script>
+                            // Tự động mở lại tab thú cưng nếu có lỗi (vì lỗi chỉ xảy ra ở thú cưng)
+                            document.addEventListener('DOMContentLoaded', function() { switchTab('pets'); });
+                        </script>
+                    }
+                    <div style="width: 40px; height: 40px; background: #333; border-radius: 50%; overflow: hidden; border: 2px solid rgba(255,255,255,0.2);">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Admin" style="width: 100%; height: 100%;" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-title">👥 Total Users</div>
+                    <h3 class="stat-value">@ViewBag.TotalUsers</h3>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">✅ Active Users</div>
+                    <h3 class="stat-value">@ViewBag.ActiveUsers</h3>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">🔗 Active Connections</div>
+                    <h3 class="stat-value">@ViewBag.TotalConnections</h3>
+                </div>
+            </div>
+
+            <!-- Users Panel -->
+            <div id="usersPanel" class="panel active">
+                <div class="panel-header">
+                    <h3 class="panel-title">Quản lý Người Dùng</h3>
+                    <input type="text" class="search-bar" id="searchUser" placeholder="Tìm theo Username hoặc Tên..." onkeyup="filterTable('userTable', 'searchUser')" />
+                </div>
+                <div style="max-height: 420px; overflow-y: auto; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
+                    <table id="userTable" style="margin: 0;">
+                        <thead style="position: sticky; top: 0; background: #1e293b; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.5);">
+                            <tr>
+                            <th>ID</th>
+                            <th>Tên hiển thị</th>
+                            <th>Username</th>
+                            <th>Role</th>
+                            <th>Trạng thái</th>
+                            <th>Lý do khóa</th>
+                            <th>Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach(var u in Model) {
+                            <tr>
+                                <td>#@u.Id</td>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <div style="width:30px; height:30px; background:rgba(255,255,255,0.1); border-radius:50%; text-align:center; line-height:30px; border: 1px solid rgba(255,255,255,0.2);">
+                                            @(u.DisplayName.Substring(0,1).ToUpper())
+                                        </div>
+                                        @u.DisplayName
+                                    </div>
+                                </td>
+                                <td style="color: #94a3b8;">@@@u.Username</td>
+                                <td><span style="color: @(u.RoleId == 1 ? "#f472b6" : "inherit");">@(u.RoleId == 1 ? "Admin" : "User")</span></td>
+                                <td>
+                                    @if(u.IsLocked) { <span class="badge badge-danger">Đã khóa</span> }
+                                    else { <span class="badge badge-success">Hoạt động</span> }
+                                </td>
+                                <td><span style="color: gray; font-size: 0.85rem;">@(u.LockReason ?? "-")</span></td>
+                                <td>
+                                    @if(u.RoleId != 1) {
+                                        @if(u.IsLocked) {
+                                            <form method="post" action="/Admin/UnlockUser" style="margin:0;">
+                                                <input type="hidden" name="id" value="@u.Id" />
+                                                <button type="submit" class="btn-action btn-unlock">Mở khóa</button>
+                                            </form>
+                                        } else {
+                                            <button type="button" class="btn-action btn-lock" onclick="openLockModal(@u.Id, '@u.DisplayName')">Khóa</button>
+                                        }
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                </div>
+            </div>
+
+            <!-- Connections Panel -->
+            <div id="connectionsPanel" class="panel">
+                <div class="panel-header">
+                    <h3 class="panel-title">Mạng lưới Kết nối Chuỗi</h3>
+                    <input type="text" class="search-bar" id="searchConn" placeholder="Truy xuất Mã Chuỗi (VD: CH-A1B2C)..." onkeyup="filterTable('connTable', 'searchConn')" />
+                </div>
+                <div style="max-height: 420px; overflow-y: auto; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
+                    <table id="connTable" style="margin: 0;">
+                        <thead style="position: sticky; top: 0; background: #1e293b; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.5);">
+                            <tr>
+                            <th>Mã Chuỗi</th>
+                            <th>Người dùng 1</th>
+                            <th>Người dùng 2</th>
+                            <th>Trạng thái Cặp</th>
+                            <th>Số Ngày Chuỗi</th>
+                            <th>Ngày kết nối</th>
+                            <th>Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if(friendships != null) {
+                            @foreach(var f in friendships) {
+                                <tr>
+                                    @{
+                                        var streak = streaks?.FirstOrDefault(s => s.FriendshipId == f.Id);
+                                        var currentCount = streak?.CurrentStreakCount ?? 0;
+                                    }
+                                    <td><span style="color: #a855f7; font-weight: 600; background: rgba(168,85,247,0.1); padding: 0.3rem 0.6rem; border-radius: 8px; border: 1px solid rgba(168,85,247,0.3);">@f.ConnectionCode</span></td>
+                                    <td>
+                                        <span style="color: @(f.User1.IsLocked ? "#ef4444" : "white");">@f.User1?.DisplayName</span> 
+                                        <span style="color: #94a3b8; font-size: 0.85rem;">(@@@f.User1?.Username)</span>
+                                    </td>
+                                    <td>
+                                        <span style="color: @(f.User2.IsLocked ? "#ef4444" : "white");">@f.User2?.DisplayName</span> 
+                                        <span style="color: #94a3b8; font-size: 0.85rem;">(@@@f.User2?.Username)</span>
+                                    </td>
+                                    <td>
+                                        @if(f.User1.IsLocked || f.User2.IsLocked) {
+                                            <span class="badge badge-danger">Có User bị khóa</span>
+                                        } else {
+                                            <span class="badge badge-success">Bình thường</span>
+                                        }
+                                    </td>
+                                    <td style="font-weight: bold; color: #f59e0b; font-size: 1.1rem;">🔥 @currentCount</td>
+                                    <td style="color: gray;">@f.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td>
+                                        <button type="button" class="btn-action btn-edit" onclick="openEditStreakModal(@f.Id, '@f.ConnectionCode', @currentCount)">Sửa</button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+                </div>
+            </div>
+
+            <!-- Pets Panel -->
+            <div id="petsPanel" class="panel">
+                <div class="panel-header" style="margin-bottom: 1rem;">
+                    <h3 class="panel-title">Quản lý Thú Cưng (Pets)</h3>
+                    <button class="btn-action btn-unlock" onclick="document.getElementById('addPetModal').style.display='flex'">+ Thêm Thú Cưng</button>
+                </div>
+
+                <div style="margin-bottom: 1rem;">
+                    <input type="text" id="searchPetInput" class="modal-input" placeholder="🔍 Tìm kiếm tên Pet..." style="margin: 0; background: rgba(0,0,0,0.5);" onkeyup="filterPets()" />
+                </div>
+
+                <div style="max-height: 420px; overflow-y: auto; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
+                    <table id="petsTable" style="margin: 0;">
+                        <thead style="position: sticky; top: 0; background: #1e293b; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.5);">
+                            <tr>
+                                <th>Ảnh</th>
+                                <th>Tên Pet</th>
+                                <th>Mốc Chuỗi Yêu Cầu</th>
+                                <th>Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody id="petsTbody">
+                        @if(pets != null) {
+                            @foreach(var p in pets) {
+                                <tr>
+                                    <td><img src="@p.ImageUrl" style="width: 60px; height: 60px; object-fit: contain; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2));" /></td>
+                                    <td><strong style="color: white; font-size: 1.1rem;">@p.Name</strong></td>
+                                    <td><span style="color: #f59e0b; font-weight: bold; font-size: 1.2rem;">🔥 @p.RequiredStreak</span></td>
+                                    <td>
+                                        <div style="display: flex; gap: 0.5rem;">
+                                            <button type="button" class="btn-action btn-edit" onclick="openEditPetModal(@p.Id, '@p.Name', @p.RequiredStreak, '@p.ImageUrl')">Sửa</button>
+                                            <form method="post" action="/Admin/DeletePet" style="margin:0;" onsubmit="return confirm('Bạn có chắc chắn muốn xóa thú cưng này khỏi hệ thống?');">
+                                                <input type="hidden" name="id" value="@p.Id" />
+                                                <button type="submit" class="btn-action btn-lock">Xóa</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Lock Modal -->
+    <div id="lockModal" class="modal-overlay">
+        <div class="modal-box">
+            <h3 style="margin-top: 0; color: #ef4444;">Khóa tài khoản <span id="lockUserName"></span></h3>
+            <form method="post" action="/Admin/LockUser">
+                <input type="hidden" name="id" id="lockUserId" />
+                <label style="color: #94a3b8; font-size: 0.9rem;">Lý do khóa (sẽ hiển thị cho user thấy):</label>
+                <input type="text" name="reason" class="modal-input" placeholder="VD: Vi phạm nội quy, có hành vi gian lận..." required />
+                <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                    <button type="button" onclick="closeLockModal()" class="sidebar-logout" style="flex: 1; background: transparent; border: 1px solid rgba(255,255,255,0.2);">Hủy</button>
+                    <button type="submit" class="sidebar-logout" style="flex: 1; background: #ef4444; border: 1px solid #ef4444;">Tiến hành Khóa</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Streak Modal -->
+    <div id="editStreakModal" class="modal-overlay">
+        <div class="modal-box">
+            <h3 style="margin-top: 0; color: #38bdf8;">Cập nhật chuỗi <span id="editStreakCode" style="color: #a855f7;"></span></h3>
+            <form method="post" action="/Admin/UpdateStreak">
+                <input type="hidden" name="friendshipId" id="editFriendshipId" />
+                <label style="color: #94a3b8; font-size: 0.9rem;">Số ngày chuỗi mới:</label>
+                <input type="number" name="currentStreakCount" id="editStreakCount" class="modal-input" min="0" required />
+                <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                    <button type="button" onclick="closeEditStreakModal()" class="sidebar-logout" style="flex: 1; background: transparent; border: 1px solid rgba(255,255,255,0.2);">Hủy</button>
+                    <button type="submit" class="sidebar-logout" style="flex: 1; background: #38bdf8; border: 1px solid #38bdf8; color: #0f111a;">Lưu thay đổi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Pet Modal -->
+    <div id="addPetModal" class="modal-overlay">
+        <div class="modal-box">
+            <h3 style="margin-top: 0; color: #10b981;">Thêm Thú Cưng Mới</h3>
+            <form id="addPetForm" method="post" action="/Admin/AddPet" enctype="multipart/form-data" onsubmit="return validatePetForm(this, false)">
+                <label style="color: #94a3b8; font-size: 0.9rem;">Tên thú cưng:</label>
+                <input type="text" name="name" class="modal-input" required />
+                
+                <label style="color: #94a3b8; font-size: 0.9rem;">Mốc Chuỗi (VD: 100):</label>
+                <input type="number" name="requiredStreak" class="modal-input" min="0" required />
+
+                <label style="color: #94a3b8; font-size: 0.9rem;">Ảnh (PNG/GIF):</label>
+                <input type="file" name="image" class="modal-input" accept="image/*" required onchange="previewImage(event, 'addPetPreview')" />
+
+                <div style="text-align: center; margin-top: 0.5rem; min-height: 100px;">
+                    <img id="addPetPreview" style="width: 100px; height: 100px; object-fit: contain; display: none; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2));" />
+                </div>
+
+                <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                    <button type="button" onclick="document.getElementById('addPetModal').style.display='none'" class="sidebar-logout" style="flex: 1; background: transparent; border: 1px solid rgba(255,255,255,0.2);">Hủy</button>
+                    <button type="submit" class="sidebar-logout" style="flex: 1; background: #10b981; border: 1px solid #10b981; color: white;">Thêm Pet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Pet Modal -->
+    <div id="editPetModal" class="modal-overlay">
+        <div class="modal-box">
+            <h3 style="margin-top: 0; color: #38bdf8;">Chỉnh Sửa Thú Cưng</h3>
+            <form id="editPetForm" method="post" action="/Admin/EditPet" enctype="multipart/form-data" onsubmit="return validatePetForm(this, true)">
+                <input type="hidden" name="id" id="editPetId" />
+                <label style="color: #94a3b8; font-size: 0.9rem;">Tên thú cưng:</label>
+                <input type="text" name="name" id="editPetName" class="modal-input" required />
+                
+                <label style="color: #94a3b8; font-size: 0.9rem;">Mốc Chuỗi:</label>
+                <input type="number" name="requiredStreak" id="editPetStreak" class="modal-input" min="0" required />
+
+                <label style="color: #94a3b8; font-size: 0.9rem;">Thay đổi Ảnh (bỏ trống nếu giữ nguyên):</label>
+                <input type="file" name="image" id="editPetImage" class="modal-input" accept="image/*" onchange="previewImage(event, 'editPetPreview')" />
+                
+                <div style="text-align: center; margin-top: 0.5rem; min-height: 100px;">
+                    <img id="editPetPreview" src="" style="width: 100px; height: 100px; object-fit: contain; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2));" />
+                </div>
+
+                <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                    <button type="button" onclick="document.getElementById('editPetModal').style.display='none'" class="sidebar-logout" style="flex: 1; background: transparent; border: 1px solid rgba(255,255,255,0.2);">Hủy</button>
+                    <button type="submit" class="sidebar-logout" style="flex: 1; background: #38bdf8; border: 1px solid #38bdf8; color: #0f111a;">Lưu Thay Đổi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tabId) {
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            
+            document.getElementById('usersPanel').classList.remove('active');
+            document.getElementById('connectionsPanel').classList.remove('active');
+            document.getElementById('petsPanel').classList.remove('active');
+            
+            if(tabId === 'dashboard' || tabId === 'users') {
+                document.getElementById('usersPanel').classList.add('active');
+            } else if (tabId === 'connections') {
+                document.getElementById('connectionsPanel').classList.add('active');
+            } else if (tabId === 'pets') {
+                document.getElementById('petsPanel').classList.add('active');
+            }
+        }
+
+        function filterTable(tableId, inputId) {
+            var input = document.getElementById(inputId).value.toLowerCase();
+            var table = document.getElementById(tableId);
+            var tr = table.getElementsByTagName("tr");
+
+            for (var i = 1; i < tr.length; i++) {
+                var txtValue = tr[i].textContent || tr[i].innerText;
+                if (txtValue.toLowerCase().indexOf(input) > -1) {
+                    tr[i].style.display = "";
+                } else {
+                    tr[i].style.display = "none";
+                }
+            }
+        }
+
+        function openLockModal(id, name) {
+            document.getElementById('lockUserId').value = id;
+            document.getElementById('lockUserName').innerText = name;
+            document.getElementById('lockModal').style.display = 'flex';
+        }
+        function closeLockModal() {
+            document.getElementById('lockModal').style.display = 'none';
+        }
+
+        function openEditStreakModal(friendshipId, code, currentCount) {
+            document.getElementById('editFriendshipId').value = friendshipId;
+            document.getElementById('editStreakCode').innerText = code;
+            document.getElementById('editStreakCount').value = currentCount;
+            document.getElementById('editStreakModal').style.display = 'flex';
+        }
+        function closeEditStreakModal() {
+            document.getElementById('editStreakModal').style.display = 'none';
+        }
+
+        function previewImage(event, previewId) {
+            var reader = new FileReader();
+            reader.onload = function(){
+                var output = document.getElementById(previewId);
+                output.src = reader.result;
+                output.style.display = 'inline-block';
+            };
+            if(event.target.files[0]) {
+                reader.readAsDataURL(event.target.files[0]);
+            }
+        }
+
+        function openEditPetModal(id, name, streak, imageUrl) {
+            document.getElementById('editPetId').value = id;
+            document.getElementById('editPetName').value = name;
+            document.getElementById('editPetStreak').value = streak;
+            document.getElementById('editPetPreview').src = imageUrl;
+            document.getElementById('editPetPreview').style.display = 'inline-block';
+            document.getElementById('editPetModal').style.display = 'flex';
+        }
+
+        function validatePetForm(form, isEdit) {
+            var nameInput = form.name;
+            var streakInput = form.requiredStreak;
+            var name = nameInput.value.trim().toLowerCase();
+            var streak = streakInput.value.trim();
+            var editId = isEdit ? form.id.value : null;
+
+            // Reset borders
+            nameInput.style.border = "1px solid rgba(255,255,255,0.2)";
+            streakInput.style.border = "1px solid rgba(255,255,255,0.2)";
+
+            var tbody = document.getElementById("petsTbody");
+            if (!tbody) return true;
+            var trs = tbody.getElementsByTagName("tr");
+            
+            var isDup = false;
+            var dupReason = "";
+
+            for (var i = 0; i < trs.length; i++) {
+                var currentId = null;
+                var formElement = trs[i].querySelector("form[action='/Admin/DeletePet'] input[name='id']");
+                if(formElement) currentId = formElement.value;
+
+                if(isEdit && currentId === editId) continue; // Bỏ qua bản thân nó khi đang sửa
+
+                var tdName = trs[i].getElementsByTagName("td")[1].innerText.trim().toLowerCase();
+                var tdStreak = trs[i].getElementsByTagName("td")[2].innerText.replace('🔥', '').trim();
+
+                if (tdName === name) {
+                    isDup = true;
+                    dupReason = "Tên thú cưng này đã tồn tại!";
+                    nameInput.style.border = "2px solid #ef4444";
+                    break;
+                }
+                if (tdStreak === streak) {
+                    isDup = true;
+                    dupReason = "Mốc chuỗi này đã có thú cưng khác sở hữu!";
+                    streakInput.style.border = "2px solid #ef4444";
+                    break;
+                }
+            }
+
+            if (isDup) {
+                alert(dupReason);
+                return false; // Ngăn chặn gửi form
+            }
+            return true;
+        }
+
+        function filterPets() {
+            var input = document.getElementById("searchPetInput");
+            var filter = input.value.toLowerCase();
+            var tbody = document.getElementById("petsTbody");
+            var trs = tbody.getElementsByTagName("tr");
+
+            for (var i = 0; i < trs.length; i++) {
+                var tdName = trs[i].getElementsByTagName("td")[1];
+                if (tdName) {
+                    var txtValue = tdName.textContent || tdName.innerText;
+                    if (txtValue.toLowerCase().indexOf(filter) > -1) {
+                        trs[i].style.display = "";
+                    } else {
+                        trs[i].style.display = "none";
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>

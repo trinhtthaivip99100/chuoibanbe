@@ -1,0 +1,72 @@
+@{ 
+    ViewData["Title"] = "Tìm Bạn Bè"; 
+    var myId = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+}
+
+<div class="glass-card" style="max-width: 600px; margin: 0 auto; position: relative; overflow: visible;">
+    <h2 class="text-center mb-4">Tìm Bạn Bè</h2>
+    <div class="mb-4" style="position: relative;">
+        <input type="text" id="searchInput" placeholder="Tìm theo tên hoặc ID..." style="box-sizing: border-box; width: 100%; padding: 1rem; border-radius: 12px; border: none; background: rgba(0,0,0,0.2); color: white;" autocomplete="off" />
+        
+        <div id="searchResults" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: rgba(30,30,40,0.98); backdrop-filter: blur(10px); border-radius: 12px; margin-top: 0.5rem; padding: 0.5rem; border: 1px solid rgba(255,255,255,0.1); z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            <!-- Results injected here -->
+        </div>
+    </div>
+</div>
+
+<script>
+    const input = document.getElementById('searchInput');
+    const resultsContainer = document.getElementById('searchResults');
+    
+    input.addEventListener('input', function() {
+        const q = this.value.trim();
+        if (q.length === 0) {
+            resultsContainer.style.display = 'none';
+            return;
+        }
+        
+        fetch('/Friend/SearchAjax?q=' + encodeURIComponent(q))
+            .then(r => r.json())
+            .then(users => {
+                if (users.length === 0) {
+                    resultsContainer.innerHTML = '<div style="padding: 1rem; text-align: center; color: gray;">Không tìm thấy kết quả</div>';
+                } else {
+                    resultsContainer.innerHTML = users.map(u => `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                <div class="user-avatar" style="width: 40px; height: 40px; font-size: 1rem; overflow: hidden; margin: 0;">
+                                    ${u.avatarUrl ? `<img src="${u.avatarUrl}" style="width:100%; height:100%; object-fit:cover;" />` : u.displayName.charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                    <h4 style="margin:0; font-size: 1rem;">${u.displayName}</h4>
+                                    <span style="font-size: 0.8rem; color: gray;">@@${u.username}</span>
+                                </div>
+                            </div>
+                            <div>
+                                ${u.status === -1 ? `
+                                    <form method="post" action="/Friend/SendRequest" style="margin:0;">
+                                        <input type="hidden" name="targetUserId" value="${u.id}" />
+                                        <button type="submit" class="btn-glow" style="width: auto; white-space: nowrap; padding: 0.5rem 1.2rem; font-size: 0.85rem; border-radius: 20px; text-transform: none; letter-spacing: normal; display: flex; align-items: center; gap: 0.3rem;">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                            Kết bạn
+                                        </button>
+                                    </form>
+                                ` : u.status === 0 ? (u.actionUserId == @myId ? `
+                                    <form method="post" action="/Friend/CancelRequest" style="margin:0;">
+                                        <input type="hidden" name="targetUserId" value="${u.id}" />
+                                        <button type="submit" class="btn-glow" style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #ef4444; width: auto; white-space: nowrap; padding: 0.5rem 1.2rem; font-size: 0.85rem; border-radius: 20px; text-transform: none; box-shadow: none;">Hủy yêu cầu</button>
+                                    </form>
+                                ` : `<span class="status-badge status-waiting">Đang chờ bạn</span>`) 
+                                  : `
+                                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                        <span class="status-badge status-checked">Bạn bè</span>
+                                    </div>
+                                  ` }
+                            </div>
+                        </div>
+                    `).join('');
+                }
+                resultsContainer.style.display = 'block';
+            });
+    });
+</script>

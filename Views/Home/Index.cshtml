@@ -1,0 +1,402 @@
+@model List<KetBanChoiChuoi.Controllers.StreakViewModel>
+@{ 
+    ViewData["Title"] = "Dashboard"; 
+    var myName = User.Claims.FirstOrDefault(c => c.Type == "DisplayName")?.Value ?? "U";
+    var myAvatar = User.Claims.FirstOrDefault(c => c.Type == "AvatarUrl")?.Value;
+    var pets = ViewBag.Pets as List<KetBanChoiChuoi.Models.Pet>;
+}
+@functions {
+    public string GetStreakClass(int count) {
+        if(count >= 500) return "streak-tier-500";
+        if(count >= 300) return "streak-tier-300";
+        if(count >= 200) return "streak-tier-200";
+        if(count >= 100) return "streak-tier-100";
+        if(count >= 30) return "streak-tier-30";
+        if(count >= 10) return "streak-tier-10";
+        return "streak-tier-0";
+    }
+
+    public string GetAvatarClass(int count) {
+        if(count >= 500) return "avatar-tier-500";
+        if(count >= 300) return "avatar-tier-300";
+        if(count >= 200) return "avatar-tier-200";
+        if(count >= 100) return "avatar-tier-100";
+        if(count >= 30) return "avatar-tier-30";
+        if(count >= 10) return "avatar-tier-10";
+        return "avatar-tier-0";
+    }
+}
+
+<style>
+.container-custom { max-width: 1000px !important; }
+
+.dashboard-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    align-items: start;
+}
+@@media(min-width: 768px) {
+    .dashboard-layout {
+        grid-template-columns: 2fr 1fr;
+    }
+}
+
+.connection-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    position: relative;
+    padding: 2rem 0;
+}
+.connection-line {
+    flex: 1;
+    height: 4px;
+    background: rgba(255,255,255,0.1);
+    position: relative;
+    border-radius: 2px;
+    margin: 0 1rem;
+    overflow: hidden;
+}
+.connection-line::after {
+    content: '';
+    position: absolute;
+    top: 0; left: -50%; width: 50%; height: 100%;
+    background: linear-gradient(90deg, transparent, var(--accent-primary), transparent);
+    animation: flow 2s infinite linear;
+}
+@@keyframes flow {
+    0% { left: -50%; }
+    100% { left: 100%; }
+}
+.streak-center {
+    position: absolute;
+    top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background: var(--bg-dark);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.1);
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 0 15px rgba(236,72,153,0.3);
+}
+
+/* Sidebar Styles */
+.friend-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 220px;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+}
+.friend-list::-webkit-scrollbar { width: 6px; }
+.friend-list::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); border-radius: 10px; }
+.friend-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+
+.friend-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.8rem;
+    background: rgba(255,255,255,0.05);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+}
+.friend-item:hover {
+    background: rgba(255,255,255,0.1);
+}
+.friend-item.active {
+    background: rgba(168,85,247,0.15);
+    border-color: var(--accent-primary);
+}
+
+.streak-card-wrapper {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+.streak-card-wrapper.active {
+    display: block;
+}
+@@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* TIER FIRE STYLES */
+@@keyframes fire-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+@@keyframes fire-blaze { 0%, 100% { transform: scale(1) rotate(-3deg); } 50% { transform: scale(1.2) rotate(3deg); } }
+@@keyframes fire-rainbow { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
+
+.streak-tier-0 { color: #f59e0b; text-shadow: 0 0 5px rgba(245, 158, 11, 0.4); }
+.streak-tier-10 { color: #10b981; text-shadow: 0 0 15px rgba(16, 185, 129, 0.8); animation: fire-pulse 2s infinite; display: inline-block; }
+.streak-tier-30 { color: #3b82f6; text-shadow: 0 0 20px rgba(59, 130, 246, 1); animation: fire-pulse 1.5s infinite; display: inline-block; }
+.streak-tier-100 { color: #a855f7; text-shadow: 0 0 25px rgba(168, 85, 247, 1); animation: fire-blaze 1.5s infinite; display: inline-block; }
+.streak-tier-200 { color: #ef4444; text-shadow: 0 0 30px rgba(239, 68, 68, 1), 0 0 10px rgba(239, 68, 68, 0.5); animation: fire-blaze 1s infinite; display: inline-block; font-weight: 900; }
+.streak-tier-300 { color: #e2e8f0; text-shadow: 0 0 40px rgba(255, 255, 255, 1), 0 0 20px rgba(14, 165, 233, 1); animation: fire-blaze 0.8s infinite; display: inline-block; font-weight: 900; }
+.streak-tier-500 {
+    background: linear-gradient(90deg, #ff0000, #ff7300, #fffb00, #48ff00, #00ffd5, #002bff, #7a00ff, #ff00c8, #ff0000);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    color: transparent;
+    animation: fire-rainbow 2s linear infinite, fire-blaze 0.5s infinite;
+    filter: drop-shadow(0 0 30px rgba(255,255,255,0.8));
+    display: inline-block;
+    font-weight: 900;
+}
+
+@@media(max-width: 768px) {
+    .pet-img {
+        width: 100px !important; height: 100px !important; margin-bottom: -10px !important;
+    }
+    .streak-center {
+        padding: 0.5rem 1rem !important;
+    }
+    .streak-center span {
+        font-size: 1.8rem !important;
+    }
+    .user-avatar {
+        width: 60px !important; height: 60px !important; font-size: 1.5rem !important;
+    }
+    .connection-container {
+        padding: 4rem 0 !important;
+    }
+}
+
+@@keyframes bounce-pet {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-10px) scale(1.05); }
+}
+
+/* AVATAR TIER STYLES */
+@@keyframes pulse-shadow-10 { 0%, 100% { box-shadow: 0 0 15px rgba(16,185,129,0.5); } 50% { box-shadow: 0 0 25px rgba(16,185,129,1); } }
+@@keyframes pulse-shadow-30 { 0%, 100% { box-shadow: 0 0 20px rgba(59,130,246,0.6); } 50% { box-shadow: 0 0 35px rgba(59,130,246,1); } }
+@@keyframes pulse-shadow-100 { 0%, 100% { box-shadow: 0 0 25px rgba(168,85,247,0.7); } 50% { box-shadow: 0 0 45px rgba(168,85,247,1); } }
+@@keyframes pulse-shadow-200 { 0%, 100% { box-shadow: 0 0 30px rgba(239,68,68,0.8); } 50% { box-shadow: 0 0 55px rgba(239,68,68,1); } }
+@@keyframes pulse-shadow-300 { 0%, 100% { box-shadow: 0 0 40px rgba(255,255,255,0.8), 0 0 20px rgba(14,165,233,0.5); } 50% { box-shadow: 0 0 70px rgba(255,255,255,1), 0 0 30px rgba(14,165,233,1); } }
+@@keyframes rainbow-shadow {
+    0% { box-shadow: 0 0 40px #ff0000; border-color: #ff0000; }
+    20% { box-shadow: 0 0 40px #fffb00; border-color: #fffb00; }
+    40% { box-shadow: 0 0 40px #48ff00; border-color: #48ff00; }
+    60% { box-shadow: 0 0 40px #00ffd5; border-color: #00ffd5; }
+    80% { box-shadow: 0 0 40px #7a00ff; border-color: #7a00ff; }
+    100% { box-shadow: 0 0 40px #ff0000; border-color: #ff0000; }
+}
+
+.avatar-tier-none { border: 3px solid rgba(255,255,255,0.1); box-shadow: none; }
+.avatar-tier-0 { border: 3px solid #10b981; box-shadow: 0 0 15px rgba(16,185,129,0.5); }
+.avatar-tier-10 { border: 3px solid #10b981; animation: pulse-shadow-10 2s infinite; }
+.avatar-tier-30 { border: 3px solid #3b82f6; animation: pulse-shadow-30 1.5s infinite; }
+.avatar-tier-100 { border: 3px solid #a855f7; animation: pulse-shadow-100 1s infinite; }
+.avatar-tier-200 { border: 3px solid #ef4444; animation: pulse-shadow-200 0.8s infinite; }
+.avatar-tier-300 { border: 3px solid #e2e8f0; animation: pulse-shadow-300 0.5s infinite; }
+.avatar-tier-500 { border: 3px solid #ff0000; animation: rainbow-shadow 1.5s linear infinite; }
+</style>
+
+<div class="text-center mb-4">
+    <h1 style="font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem;">Chuỗi Của Tôi</h1>
+    <p class="text-gray">Cùng nhau duy trì chuỗi mỗi ngày nhé!</p>
+</div>
+
+@if(Model == null || Model.Count == 0) {
+<div class="glass-card text-center" style="max-width: 600px; margin: 0 auto;">
+    <h2>Chưa có đối tác chơi chuỗi!</h2>
+    <p class="text-gray mt-2">Hãy vào mục Tìm bạn bè để kết nối và bắt đầu chuỗi nhé.</p>
+    <a href="/Friend/Search" class="btn-glow" style="display: inline-block; max-width: 200px; margin-top: 1rem; text-decoration: none;">Tìm Bạn Bè</a>
+</div>
+} else {
+    <div class="dashboard-layout">
+        <!-- Left Column: Detail Card -->
+        <div>
+            @for(int i = 0; i < Model.Count; i++) {
+                var item = Model[i];
+                var friendAvatar = item.Friend.AvatarUrl;
+                
+                <div class="glass-card streak-card-wrapper @(i == 0 ? "active" : "")" id="streak-card-@i">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem; margin-bottom: 1.5rem;">
+                        <div>
+                            <h3 style="font-size: 1.5rem; color: white; margin: 0;">Chuỗi với <span style="color: #10b981;">@item.Friend.DisplayName</span></h3>
+                            <div style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 0.3rem;">
+                                Phục hồi: <strong style="color: #f472b6;">@item.Streak.RecoveriesLeft/5</strong> lần
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <button type="button" onclick="showCancelModal(@item.FriendshipId)" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; padding: 0.4rem 1rem; border-radius: 8px; cursor: pointer; transition: 0.2s; font-weight: bold;">Hủy Chuỗi</button>
+                            <div style="margin-top: 0.5rem; display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem;">
+                                <span style="font-size: 0.8rem; color: var(--text-secondary);">Mã: <strong style="color: #a855f7;">@item.ConnectionCode</strong></span>
+                                <button type="button" onclick="copyCode('@item.ConnectionCode')" style="background: rgba(255,255,255,0.1); border: none; padding: 0.2rem 0.5rem; border-radius: 4px; cursor: pointer; color: white; font-size: 0.75rem;" title="Copy Mã">📋</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="connection-container">
+                        <!-- Bạn -->
+                        <div class="text-center" style="width: 120px; flex-shrink: 0;">
+                            <a href="/Profile" title="Bấm để đổi tên">
+                                <div class="user-avatar @GetAvatarClass(item.Streak.CurrentStreakCount)" style="margin: 0 auto; width: 80px; height: 80px; font-size: 2rem; overflow: hidden; transition: 0.3s; border-radius: 20px;">
+                                    @if(!string.IsNullOrEmpty(myAvatar)) { <img src="@myAvatar" style="width:100%; height:100%; object-fit:cover;" /> } 
+                                    else { @(myName.Substring(0,1).ToUpper()) }
+                                </div>
+                            </a>
+                            <h4 class="mt-3 mb-2" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: white;">Bạn</h4>
+                            <form method="post" action="/Home/CheckIn">
+                                <input type="hidden" name="friendshipId" value="@item.FriendshipId" />
+                                <button type="submit" class="btn-glow" style="padding: 0.5rem; font-size: 0.9rem; border-radius: 12px; width: 100%; text-transform: none;" @(item.ICheckedIn ? "disabled" : "")>
+                                    @(item.ICheckedIn ? "Đã Xong" : "Điểm danh")
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Line -->
+                        <div class="connection-line"></div>
+                        
+                        <!-- Center Fire & Pet -->
+                        @{ var currentPet = pets?.FirstOrDefault(p => item.Streak.CurrentStreakCount >= p.RequiredStreak); }
+                        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; z-index: 10;">
+                            @if(currentPet != null) {
+                                <img src="@currentPet.ImageUrl" title="@currentPet.Name" class="pet-img" style="width: 180px; height: 180px; object-fit: contain; animation: bounce-pet 2s infinite ease-in-out; margin-bottom: -20px; filter: drop-shadow(0 0 20px rgba(255,255,255,0.6)); z-index: 11; position: relative; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; transform: translateZ(0); will-change: transform;" />
+                            }
+                            <div class="streak-center" style="position: relative; top: auto; left: auto; transform: none; padding: 0.8rem 1.5rem; border-radius: 30px;">
+                                <span class="@GetStreakClass(item.Streak.CurrentStreakCount)" style="font-size: 2.5rem; transition: 0.3s;">🔥 @item.Streak.CurrentStreakCount</span>
+                            </div>
+                        </div>
+
+                        <!-- Bạn bè -->
+                        <div class="text-center" style="width: 120px; flex-shrink: 0;">
+                            <div class="user-avatar @GetAvatarClass(item.Streak.CurrentStreakCount)" style="margin: 0 auto; width: 80px; height: 80px; font-size: 2rem; overflow: hidden; transition: 0.3s; border-radius: 20px;">
+                                @if(!string.IsNullOrEmpty(friendAvatar)) { <img src="@friendAvatar" style="width:100%; height:100%; object-fit:cover;" /> } 
+                                else { @(item.Friend.DisplayName.Substring(0,1).ToUpper()) }
+                            </div>
+                            <h4 class="mt-3 mb-2" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">@item.Friend.DisplayName</h4>
+                            <button class="btn-glow" style="padding: 0.5rem; font-size: 0.9rem; border-radius: 12px; width: 100%; text-transform: none;" disabled>
+                                @(item.FriendCheckedIn ? "Đã Xong" : "Đang đợi...")
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Right Column: Sidebar List -->
+        <div class="glass-card" style="padding: 1.5rem; display: flex; flex-direction: column;">
+            <h3 class="mb-3" style="font-size: 1.2rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.8rem;">Danh sách Chuỗi</h3>
+            
+            <!-- Search Box for Friends List -->
+            <input type="text" id="filterFriends" placeholder="Tìm tên hoặc ID..." style="box-sizing: border-box; width: 100%; padding: 0.8rem; border-radius: 8px; border: none; background: rgba(0,0,0,0.2); color: white; margin-bottom: 1rem; font-size: 0.9rem;" onkeyup="filterFriendList()" autocomplete="off" />
+
+            <div class="friend-list" id="friendListContainer">
+                @for(int i = 0; i < Model.Count; i++) {
+                    var item = Model[i];
+                    var friendAvatar = item.Friend.AvatarUrl;
+                    <div class="friend-item @(i == 0 ? "active" : "")" onclick="selectStreak(@i, this)" data-name="@item.Friend.DisplayName.ToLower()" data-id="@item.Friend.Username.ToLower()">
+                        <div style="display: flex; align-items: center; gap: 0.8rem; overflow: hidden;">
+                            <div class="user-avatar @GetAvatarClass(item.Streak.CurrentStreakCount)" style="width: 40px; height: 40px; font-size: 1.2rem; margin: 0; flex-shrink: 0; overflow: hidden; transition: 0.3s; border-radius: 12px;">
+                                @if(!string.IsNullOrEmpty(friendAvatar)) { <img src="@friendAvatar" style="width:100%; height:100%; object-fit:cover;" /> } 
+                                else { @(item.Friend.DisplayName.Substring(0,1).ToUpper()) }
+                            </div>
+                            <div style="overflow: hidden;">
+                                <div style="font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                    @item.Friend.DisplayName
+                                </div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary);">
+                                    @(item.ICheckedIn && item.FriendCheckedIn ? "Hoàn thành" : "Đang chờ")
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.2rem; font-size: 1.1rem; flex-shrink: 0; padding-left: 0.5rem; font-weight: bold;">
+                            <span class="@GetStreakClass(item.Streak.CurrentStreakCount)">🔥 @item.Streak.CurrentStreakCount</span>
+                        </div>
+                    </div>
+                }
+            </div>
+            <div id="noFriendResult" style="display: none; text-align: center; color: gray; margin-top: 1rem; font-size: 0.9rem;">
+                Không tìm thấy ai.
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Modal Hủy Chuỗi -->
+<div id="cancelModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 1000; align-items: center; justify-content: center;">
+    <div class="glass-card" style="max-width: 400px; width: 90%; text-align: center;">
+        <h3 style="color: #ef4444; margin-bottom: 1rem; font-size: 1.5rem;">Cảnh Báo Hủy Chuỗi!</h3>
+        <p class="text-gray mb-4">Hành động này sẽ xóa toàn bộ số ngày chuỗi hiện tại của hai bạn. Bạn có chắc chắn muốn hủy?</p>
+        <p class="text-gray mb-2" style="font-size: 0.9rem;">Vui lòng gõ chữ <strong style="color: white;">HUYCHUOI</strong> để xác nhận:</p>
+        
+        <form method="post" action="/Home/CancelStreak">
+            <input type="hidden" name="friendshipId" id="cancelFriendshipId" value="" />
+            <input type="text" id="confirmCancelInput" onkeyup="checkCancelInput()" placeholder="Nhập HUYCHUOI..." style="width: 100%; box-sizing: border-box; padding: 0.8rem; border-radius: 8px; border: 1px solid #ef4444; background: rgba(0,0,0,0.3); color: white; margin-bottom: 1.5rem; text-align: center; font-weight: bold; font-size: 1.1rem;" autocomplete="off" />
+            
+            <div style="display: flex; gap: 1rem;">
+                <button type="button" onclick="hideCancelModal()" class="btn-glow" style="flex: 1; background: #475569; box-shadow: none;">Đóng</button>
+                <button type="submit" id="btnConfirmCancel" class="btn-glow" style="flex: 1; background: #ef4444; box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);" disabled>HỦY CHUỖI</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function selectStreak(index, element) {
+        document.querySelectorAll('.streak-card-wrapper').forEach(el => el.classList.remove('active'));
+        document.getElementById('streak-card-' + index).classList.add('active');
+        
+        document.querySelectorAll('.friend-item').forEach(el => el.classList.remove('active'));
+        element.classList.add('active');
+    }
+
+    function filterFriendList() {
+        var input = document.getElementById('filterFriends').value.toLowerCase();
+        var items = document.querySelectorAll('.friend-item');
+        var hasVisible = false;
+
+        items.forEach(function(item) {
+            var name = item.getAttribute('data-name');
+            var id = item.getAttribute('data-id');
+            if (name.includes(input) || id.includes(input)) {
+                item.style.display = 'flex';
+                hasVisible = true;
+            } else {
+                item.style.display = 'none';
+            }
+        });
+
+        document.getElementById('noFriendResult').style.display = hasVisible ? 'none' : 'block';
+    }
+
+    function showCancelModal(friendshipId) {
+        document.getElementById('cancelFriendshipId').value = friendshipId;
+        document.getElementById('confirmCancelInput').value = '';
+        document.getElementById('btnConfirmCancel').disabled = true;
+        document.getElementById('cancelModal').style.display = 'flex';
+        // Focus input
+        setTimeout(() => document.getElementById('confirmCancelInput').focus(), 100);
+    }
+
+    function hideCancelModal() {
+        document.getElementById('cancelModal').style.display = 'none';
+    }
+
+    function checkCancelInput() {
+        var val = document.getElementById('confirmCancelInput').value.toLowerCase().trim();
+        if (val === 'huychuoi') {
+            document.getElementById('btnConfirmCancel').disabled = false;
+        } else {
+            document.getElementById('btnConfirmCancel').disabled = true;
+        }
+    }
+
+    function copyCode(code) {
+        navigator.clipboard.writeText(code).then(() => {
+            if (typeof showToast === 'function') {
+                showToast('success', 'Đã sao chép mã: ' + code);
+            } else {
+                alert('Đã sao chép mã: ' + code);
+            }
+        });
+    }
+</script>

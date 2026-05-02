@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>@ViewData["Title"] - Kết Bạn Chơi Chuỗi</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <style>
+        .toast-container {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .toast {
+            background: rgba(30, 41, 59, 0.95);
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transform: translateX(120%);
+            transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            border-left: 4px solid transparent;
+            font-size: 0.95rem;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast-success {
+            border-left-color: #10b981;
+        }
+        .toast-success .toast-icon {
+            color: #10b981;
+        }
+
+        .toast-error {
+            border-left-color: #ef4444;
+        }
+        .toast-error .toast-icon {
+            color: #ef4444;
+        }
+
+        /* Mobile Menu */
+        .menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.8rem;
+            cursor: pointer;
+            padding: 0.5rem;
+        }
+        .nav-links {
+            display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; color: var(--text-secondary);
+        }
+
+        @@media (max-width: 768px) {
+            .menu-btn { display: block; }
+            .nav-links {
+                display: none;
+                flex-direction: column;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background: rgba(15, 17, 26, 0.98);
+                backdrop-filter: blur(15px);
+                padding: 1.5rem;
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+                box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+                align-items: flex-start;
+                z-index: 1000;
+            }
+            .nav-links.active {
+                display: flex;
+            }
+            .nav-divider { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <header class="nav-glass">
+        <div class="nav-content" style="display: flex; justify-content: space-between; align-items: center; position: relative;">
+            <a href="/" class="brand-text">🔥 Chuỗi</a>
+            
+            @if(User.Identity.IsAuthenticated) {
+                <button class="menu-btn" id="menuBtn">☰</button>
+            }
+
+            <div class="nav-links" id="navLinks">
+                @if(User.Identity.IsAuthenticated) {
+                    var myName = User.Claims.FirstOrDefault(c => c.Type == "DisplayName")?.Value ?? "U";
+                    var avatarUrl = User.Claims.FirstOrDefault(c => c.Type == "AvatarUrl")?.Value;
+                    var roleId = User.Claims.FirstOrDefault(c => c.Type == "RoleId")?.Value;
+
+                    <a href="/" style="color: white; text-decoration: none;">Trang Chủ</a>
+                    <a href="/Friend/Search" style="color: white; text-decoration: none;">Tìm Bạn</a>
+                    
+                    <a href="/Friend/Notifications" style="color: white; text-decoration: none; position: relative;">
+                        🔔 Thông Báo
+                        <span id="notifBadge" style="display:none; position: absolute; top: -8px; right: -15px; background: #ef4444; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.7rem; font-weight: bold; line-height: 1;">0</span>
+                    </a>
+                    
+                    <div class="nav-divider" style="width: 1px; height: 20px; background: rgba(255,255,255,0.2);"></div>
+                    
+                    <a href="/Profile" style="color: white; text-decoration: none; font-weight: 500; display: flex; align-items: center; gap: 0.5rem;" title="Chỉnh sửa hồ sơ">
+                        <div class="user-avatar" style="width: 30px; height: 30px; font-size: 0.9rem; overflow: hidden; margin: 0; position: relative; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.1);">
+                            @if(!string.IsNullOrEmpty(avatarUrl)) {
+                                <img src="@avatarUrl" style="width: 100%; height: 100%; object-fit: cover;" />
+                            } else {
+                                @(myName.Substring(0,1).ToUpper())
+                            }
+                        </div>
+                        <span style="white-space: nowrap;">@myName @(roleId == "1" ? "(Admin)" : "")</span>
+                    </a>
+                } else {
+                    <span>Chưa đăng nhập</span>
+                }
+            </div>
+        </div>
+    </header>
+
+    <main class="container-custom">
+        @RenderBody()
+    </main>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        function showToast(type, message) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            
+            const icon = type === 'success' ? '✓' : '✕';
+            
+            toast.innerHTML = `
+                <div class="toast-icon" style="font-weight: bold; font-size: 1.2rem;">${icon}</div>
+                <div>${message}</div>
+            `;
+            
+            container.appendChild(toast);
+            
+            // Show
+            setTimeout(() => toast.classList.add('show'), 10);
+            
+            // Hide after 3s
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            var menuBtn = document.getElementById("menuBtn");
+            if (menuBtn) {
+                menuBtn.addEventListener("click", function() {
+                    document.getElementById("navLinks").classList.toggle("active");
+                });
+            }
+        });
+    </script>
+
+    @if(TempData["SuccessMessage"] != null) {
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                showToast('success', '@TempData["SuccessMessage"]');
+            });
+        </script>
+    }
+    @if(TempData["ErrorMessage"] != null) {
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                showToast('error', '@TempData["ErrorMessage"]');
+            });
+        </script>
+    }
+
+    @if(User.Identity.IsAuthenticated) {
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+        <script>
+            // Lấy số lượng thông báo kết bạn
+            fetch('/Friend/GetPendingCount')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.count > 0) {
+                        const b = document.getElementById('notifBadge');
+                        b.innerText = data.count;
+                        b.style.display = 'inline-block';
+                    }
+                });
+
+            // Kết nối SignalR
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl("/notificationHub")
+                .build();
+
+            connection.on("ReceiveNotification", function () {
+                const b = document.getElementById('notifBadge');
+                if (b) {
+                    let count = parseInt(b.innerText || "0");
+                    b.innerText = count + 1;
+                    b.style.display = 'inline-block';
+                }
+            });
+
+            connection.on("ForceLogout", function () {
+                window.location.href = '/Auth/Logout';
+            });
+
+            connection.start().catch(function (err) {
+                console.error(err.toString());
+            });
+
+            // HỆ THỐNG AFK - AUTO LOGOUT
+            let afkTimeout;
+            const AFK_LIMIT = 10 * 60 * 1000; // 10 minutes
+
+            function resetAFK() {
+                clearTimeout(afkTimeout);
+                // Cập nhật timestamp trong localStorage để đồng bộ giữa các tab
+                localStorage.setItem('lastActiveTime', Date.now());
+                startAFKTimer();
+            }
+
+            function startAFKTimer() {
+                afkTimeout = setTimeout(() => {
+                    const lastActive = parseInt(localStorage.getItem('lastActiveTime') || "0");
+                    const now = Date.now();
+                    // Kiểm tra lại lần nữa lỡ tab khác vừa active
+                    if (now - lastActive >= AFK_LIMIT) {
+                        window.location.href = '/Auth/Logout';
+                    } else {
+                        // Nếu tab khác vừa active, tính lại thời gian chờ
+                        startAFKTimer();
+                    }
+                }, AFK_LIMIT);
+            }
+
+            // Gắn sự kiện để reset AFK
+            ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(evt => {
+                document.addEventListener(evt, resetAFK, true);
+            });
+
+            // Lắng nghe sự thay đổi từ localStorage (khi tab khác tương tác)
+            window.addEventListener('storage', function(e) {
+                if(e.key === 'lastActiveTime') {
+                    clearTimeout(afkTimeout);
+                    startAFKTimer();
+                }
+            });
+
+            // Khởi động AFK
+            resetAFK();
+        </script>
+    }
+</body>
+</html>
