@@ -1,60 +1,58 @@
 ﻿using KetBanChoiChuoi.Data;
 using KetBanChoiChuoi.Hubs;
+using KetBanChoiChuoi.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
+using CloudinaryDotNet;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// MVC + SignalR
+// ================= SERVICES =================
 builder.Services.AddControllersWithViews();
 builder.Services.AddSignalR();
 
-// DB PostgreSQL
+// PostgreSQL
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Email Service
-builder.Services.AddTransient<KetBanChoiChuoi.Services.EmailService>();
+// Email
+builder.Services.AddTransient<EmailService>();
 
 // Cloudinary
-var cloudName = builder.Configuration["Cloudinary:CloudName"];
-var apiKey = builder.Configuration["Cloudinary:ApiKey"];
-var apiSecret = builder.Configuration["Cloudinary:ApiSecret"];
-
-if (string.IsNullOrEmpty(cloudName) ||
-    string.IsNullOrEmpty(apiKey) ||
-    string.IsNullOrEmpty(apiSecret))
-{
-    throw new Exception("Cloudinary chưa cấu hình!");
-}
-
-var cloudinary = new CloudinaryDotNet.Cloudinary(
-    new CloudinaryDotNet.Account(cloudName, apiKey, apiSecret)
+var cloudinaryAccount = new Account(
+    builder.Configuration["Cloudinary:CloudName"],
+    builder.Configuration["Cloudinary:ApiKey"],
+    builder.Configuration["Cloudinary:ApiSecret"]
 );
+builder.Services.AddSingleton(new Cloudinary(cloudinaryAccount));
 
-builder.Services.AddSingleton(cloudinary);
-
-// Authentication (Cookie)
+// Cookie Auth
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
         options.LoginPath = "/Auth/Login";
+        options.AccessDeniedPath = "/Auth/Login";
         options.ExpireTimeSpan = TimeSpan.FromDays(30);
-        options.Cookie.HttpOnly = true;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-        options.SlidingExpiration = true;
     });
 
 var app = builder.Build();
 
-// ✅ Database migrate (QUAN TRỌNG)
+// ================= AUTO MIGRATE DB =================
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.Migrate();
+
+    try
+    {
+        db.Database.Migrate(); // 🔥 tự tạo & update DB
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine("Migration error: " + ex.Message);
+    }
 }
 
-// Middleware
+// ================= MIDDLEWARE =================
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
@@ -69,7 +67,7 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Route
+// ================= ROUTE =================
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
