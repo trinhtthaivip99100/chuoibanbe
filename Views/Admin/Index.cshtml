@@ -23,21 +23,28 @@
         .bg-glow-1 { position: fixed; top: -100px; right: -100px; width: 400px; height: 400px; background: rgba(168, 85, 247, 0.4); border-radius: 50%; filter: blur(100px); z-index: -1; pointer-events: none; }
         .bg-glow-2 { position: fixed; bottom: -100px; left: -100px; width: 400px; height: 400px; background: rgba(56, 189, 248, 0.4); border-radius: 50%; filter: blur(100px); z-index: -1; pointer-events: none; }
 
-        .dashboard-container { display: flex; height: 100vh; padding: 1rem; box-sizing: border-box; gap: 1.5rem; }
+        *, *::before, *::after { box-sizing: border-box; }
+        .dashboard-container { display: flex; min-height: 100vh; padding: 1rem; box-sizing: border-box; gap: 1.5rem; align-items: flex-start; }
 
-        .sidebar { width: 250px; background: rgba(30, 41, 59, 0.5); backdrop-filter: blur(20px); border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.1); display: flex; flex-direction: column; padding: 2rem 1.5rem; box-sizing: border-box; }
+        .sidebar { width: 250px; flex-shrink: 0; background: rgba(30, 41, 59, 0.5); backdrop-filter: blur(20px); border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.1); display: flex; flex-direction: column; padding: 2rem 1.5rem; box-sizing: border-box; }
         .sidebar-logo { font-size: 1.8rem; font-weight: 700; margin-bottom: 3rem; display: flex; align-items: center; gap: 0.5rem; }
+        .sidebar-nav { display: flex; flex-direction: column; gap: 0.5rem; }
         .nav-item { padding: 1rem; margin-bottom: 0.5rem; border-radius: 12px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 1rem; color: #cbd5e1; font-weight: 500; }
         .nav-item:hover, .nav-item.active { background: rgba(255, 255, 255, 0.1); color: #fff; }
         .sidebar-logout { margin-top: auto; background: linear-gradient(45deg, #a855f7, #3b82f6); border: none; border-radius: 12px; padding: 1rem; color: white; font-weight: 600; cursor: pointer; text-align: center; text-decoration: none; display: block; }
+        .sidebar-actions { margin-top: auto; display: grid; gap: 1rem; }
 
-        .main-content { flex: 1; overflow-y: auto; padding-right: 1rem; }
+        .main-content { flex: 1; min-width: 0; overflow-y: auto; padding-right: 0.35rem; }
         .main-content::-webkit-scrollbar { width: 6px; }
         .main-content::-webkit-scrollbar-track { background: transparent; }
         .main-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
 
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
-        .search-bar { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255,255,255,0.1); padding: 0.8rem 1.5rem; border-radius: 30px; color: white; width: 300px; outline: none; font-family: inherit; }
+        .header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 2rem; }
+        .header-meta { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; justify-content: flex-end; }
+        .inline-feedback { font-weight: 500; padding: 0.65rem 1rem; border-radius: 12px; max-width: min(100%, 420px); }
+        .inline-feedback.success { color: #10b981; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.25); }
+        .inline-feedback.error { color: #ef4444; background: rgba(239, 68, 68, 0.16); border: 1px solid #ef4444; }
+        .search-bar { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255,255,255,0.1); padding: 0.8rem 1.5rem; border-radius: 30px; color: white; width: min(100%, 300px); outline: none; font-family: inherit; }
 
         .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 2rem; }
         .stat-card { background: rgba(30, 41, 59, 0.4); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 1.5rem; position: relative; overflow: hidden; }
@@ -49,12 +56,25 @@
 
         .panel { background: rgba(30, 41, 59, 0.4); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 1.5rem; margin-bottom: 2rem; display: none; }
         .panel.active { display: block; }
-        .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .panel-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
         .panel-title { font-size: 1.2rem; font-weight: 600; margin: 0; }
 
         table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { white-space: nowrap; }
         th { padding: 1rem; color: #94a3b8; font-weight: 500; border-bottom: 1px solid rgba(255,255,255,0.1); }
         td { padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .table-shell { max-width: 100%; overflow: auto; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); -webkit-overflow-scrolling: touch; }
+        .table-shell table { margin: 0; min-width: 720px; }
+        #userTable { min-width: 920px; }
+        #connTable { min-width: 980px; }
+        #petsTable { min-width: 640px; }
+        .table-shell::-webkit-scrollbar { height: 8px; width: 8px; }
+        .table-shell::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 999px; }
+        .table-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+        .table-actions form { margin: 0; }
+        .user-cell { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
+        .user-cell-label { min-width: 0; word-break: break-word; }
+        .sticky-head { position: sticky; top: 0; background: #1e293b; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
 
         .badge { padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.8rem; font-weight: 500; }
         .badge-success { background: rgba(16, 185, 129, 0.2); color: #10b981; }
@@ -68,9 +88,47 @@
         .btn-edit { background: rgba(56, 189, 248, 0.2); border: 1px solid #38bdf8; color: #38bdf8; }
         .btn-edit:hover { background: #38bdf8; color: white; }
 
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
-        .modal-box { background: #1e293b; padding: 2rem; border-radius: 20px; width: 400px; border: 1px solid rgba(255,255,255,0.1); }
+        .modal-overlay { display: none; position: fixed; inset: 0; padding: 1rem; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+        .modal-box { background: #1e293b; padding: 2rem; border-radius: 20px; width: min(100%, 460px); max-height: calc(100vh - 2rem); overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); }
         .modal-input { width: 100%; padding: 0.8rem; margin: 1rem 0; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); color: white; box-sizing: border-box; font-family: inherit; }
+        .modal-actions { display: flex; gap: 1rem; margin-top: 1rem; }
+        .preview-box { text-align: center; margin-top: 0.5rem; min-height: 100px; }
+        .preview-box img { width: 100px; height: 100px; object-fit: contain; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2)); }
+
+        @@media (max-width: 1180px) {
+            .dashboard-container { flex-direction: column; padding: 0.9rem; }
+            .sidebar { width: 100%; padding: 1.25rem; }
+            .sidebar-logo { margin-bottom: 1.5rem; }
+            .sidebar-nav { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem; }
+            .nav-item { margin-bottom: 0; justify-content: center; text-align: center; }
+            .sidebar-actions { margin-top: 1rem; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+            .main-content { width: 100%; }
+            .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+
+        @@media (max-width: 768px) {
+            .dashboard-container { gap: 1rem; padding: 0.75rem; }
+            .header { flex-direction: column; align-items: stretch; }
+            .header-meta { justify-content: flex-start; }
+            .search-bar { width: 100%; }
+            .panel, .stat-card, .sidebar, .modal-box { border-radius: 18px; }
+            .panel { padding: 1.1rem; }
+            .stats-grid { gap: 1rem; }
+            .stat-value { font-size: 2.2rem; }
+            .table-shell table { min-width: 620px; }
+            .modal-actions { flex-direction: column; }
+        }
+
+        @@media (max-width: 560px) {
+            .stats-grid { grid-template-columns: 1fr; }
+            .sidebar-nav, .sidebar-actions { grid-template-columns: 1fr; }
+            .nav-item { justify-content: flex-start; }
+            .panel-header { align-items: stretch; }
+            .panel-title { font-size: 1.05rem; }
+            .table-shell table { min-width: 560px; }
+            .btn-action { width: 100%; }
+            .table-actions { flex-direction: column; }
+        }
     </style>
 </head>
 <body>
@@ -83,25 +141,29 @@
             <div class="sidebar-logo">
                 <span style="color: #a855f7;">●</span> Adminly
             </div>
-            <div class="nav-item active" onclick="switchTab('users', this)">📊 Dashboard</div>
-            <div class="nav-item" onclick="switchTab('users', this)">👥 Danh sách Users</div>
-            <div class="nav-item" onclick="switchTab('connections', this)">🔗 Mạng lưới Chuỗi</div>
-            <div class="nav-item" onclick="switchTab('pets', this)">🐾 Quản lý Thú Cưng</div>
+            <div class="sidebar-nav">
+                <div class="nav-item active" onclick="switchTab('users', this)">📊 Dashboard</div>
+                <div class="nav-item" onclick="switchTab('users', this)">👥 Danh sách Users</div>
+                <div class="nav-item" onclick="switchTab('connections', this)">🔗 Mạng lưới Chuỗi</div>
+                <div class="nav-item" onclick="switchTab('pets', this)">🐾 Quản lý Thú Cưng</div>
+            </div>
 
-            <a href="/Home/Index" class="sidebar-logout" style="background: transparent; border: 1px solid rgba(255,255,255,0.2); margin-top: auto; margin-bottom: 1rem;">Về Trang Chủ</a>
-            <a href="/Auth/Logout" class="sidebar-logout" style="margin-top: 0;">Logout</a>
+            <div class="sidebar-actions">
+                <a href="/Home/Index" class="sidebar-logout" style="background: transparent; border: 1px solid rgba(255,255,255,0.2); margin-top: 0; margin-bottom: 0;">Về Trang Chủ</a>
+                <a href="/Auth/Logout" class="sidebar-logout" style="margin-top: 0;">Logout</a>
+            </div>
         </div>
 
         <!-- Main Content -->
         <div class="main-content">
             <div class="header">
                 <h2>Dashboard Overview</h2>
-                <div style="display: flex; align-items: center; gap: 1rem;">
+                <div class="header-meta">
                     @if(TempData["Success"] != null) {
-                        <span style="color: #10b981; font-weight: 500;">✓ @TempData["Success"]</span>
+                        <span class="inline-feedback success">✓ @TempData["Success"]</span>
                     }
                     @if(TempData["Error"] != null) {
-                        <span style="color: #ef4444; font-weight: 500; background: rgba(239, 68, 68, 0.2); padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid #ef4444;">❌ @TempData["Error"]</span>
+                        <span class="inline-feedback error">❌ @TempData["Error"]</span>
                         <script>
                             document.addEventListener('DOMContentLoaded', function() {
                                 switchTab('pets', document.querySelectorAll('.nav-item')[3]);
@@ -135,9 +197,9 @@
                     <h3 class="panel-title">Quản lý Người Dùng</h3>
                     <input type="text" class="search-bar" id="searchUser" placeholder="Tìm theo Username hoặc Tên..." onkeyup="filterTable('userTable', 'searchUser')" />
                 </div>
-                <div style="max-height: 420px; overflow-y: auto; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
-                    <table id="userTable" style="margin: 0;">
-                        <thead style="position: sticky; top: 0; background: #1e293b; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.5);">
+                <div class="table-shell" style="max-height: 420px;">
+                    <table id="userTable">
+                        <thead class="sticky-head">
                             <tr>
                                 <th>ID</th>
                                 <th>Tên hiển thị</th>
@@ -153,11 +215,11 @@
                                 <tr>
                                     <td>#@u.Id</td>
                                     <td>
-                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <div class="user-cell">
                                             <div style="width:30px; height:30px; background:rgba(255,255,255,0.1); border-radius:50%; text-align:center; line-height:30px; border: 1px solid rgba(255,255,255,0.2);">
                                                 @(u.DisplayName.Substring(0,1).ToUpper())
                                             </div>
-                                            @u.DisplayName
+                                            <span class="user-cell-label">@u.DisplayName</span>
                                         </div>
                                     </td>
                                     <td style="color: #94a3b8;">@@@u.Username</td>
@@ -170,12 +232,16 @@
                                     <td>
                                         @if(u.RoleId != 1) {
                                             @if(u.IsLocked) {
-                                                <form method="post" action="/Admin/UnlockUser" style="margin:0;">
-                                                    <input type="hidden" name="id" value="@u.Id" />
-                                                    <button type="submit" class="btn-action btn-unlock">Mở khóa</button>
-                                                </form>
+                                                <div class="table-actions">
+                                                    <form method="post" action="/Admin/UnlockUser">
+                                                        <input type="hidden" name="id" value="@u.Id" />
+                                                        <button type="submit" class="btn-action btn-unlock">Mở khóa</button>
+                                                    </form>
+                                                </div>
                                             } else {
-                                                <button type="button" class="btn-action btn-lock" onclick="openLockModal(@u.Id, '@u.DisplayName')">Khóa</button>
+                                                <div class="table-actions">
+                                                    <button type="button" class="btn-action btn-lock" onclick="openLockModal(@u.Id, '@u.DisplayName')">Khóa</button>
+                                                </div>
                                             }
                                         }
                                     </td>
@@ -192,9 +258,9 @@
                     <h3 class="panel-title">Mạng lưới Kết nối Chuỗi</h3>
                     <input type="text" class="search-bar" id="searchConn" placeholder="Truy xuất Mã Chuỗi (VD: CH-A1B2C)..." onkeyup="filterTable('connTable', 'searchConn')" />
                 </div>
-                <div style="max-height: 420px; overflow-y: auto; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
-                    <table id="connTable" style="margin: 0;">
-                        <thead style="position: sticky; top: 0; background: #1e293b; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.5);">
+                <div class="table-shell" style="max-height: 420px;">
+                    <table id="connTable">
+                        <thead class="sticky-head">
                             <tr>
                                 <th>Mã Chuỗi</th>
                                 <th>Người dùng 1</th>
@@ -251,9 +317,9 @@
                     <input type="text" id="searchPetInput" class="modal-input" placeholder="🔍 Tìm kiếm tên Pet..." style="margin: 0; background: rgba(0,0,0,0.5);" onkeyup="filterPets()" />
                 </div>
 
-                <div style="max-height: 420px; overflow-y: auto; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
-                    <table id="petsTable" style="margin: 0;">
-                        <thead style="position: sticky; top: 0; background: #1e293b; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.5);">
+                <div class="table-shell" style="max-height: 420px;">
+                    <table id="petsTable">
+                        <thead class="sticky-head">
                             <tr>
                                 <th>Ảnh</th>
                                 <th>Tên Pet</th>
@@ -269,7 +335,7 @@
                                         <td><strong style="color: white; font-size: 1.1rem;">@p.Name</strong></td>
                                         <td><span style="color: #f59e0b; font-weight: bold; font-size: 1.2rem;">🔥 @p.RequiredStreak</span></td>
                                         <td>
-                                            <div style="display: flex; gap: 0.5rem;">
+                                            <div class="table-actions">
                                                 <button type="button" class="btn-action btn-edit" onclick="openEditPetModal(@p.Id, '@p.Name', @p.RequiredStreak, '@p.ImageUrl')">Sửa</button>
                                                 <form method="post" action="/Admin/DeletePet" style="margin:0;" onsubmit="return confirm('Bạn có chắc chắn muốn xóa thú cưng này?');">
                                                     <input type="hidden" name="id" value="@p.Id" />
@@ -295,7 +361,7 @@
                 <input type="hidden" name="id" id="lockUserId" />
                 <label style="color: #94a3b8; font-size: 0.9rem;">Lý do khóa:</label>
                 <input type="text" name="reason" class="modal-input" placeholder="VD: Vi phạm nội quy..." required />
-                <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                <div class="modal-actions">
                     <button type="button" onclick="closeLockModal()" class="sidebar-logout" style="flex: 1; background: transparent; border: 1px solid rgba(255,255,255,0.2);">Hủy</button>
                     <button type="submit" class="sidebar-logout" style="flex: 1; background: #ef4444; border: 1px solid #ef4444;">Khóa</button>
                 </div>
@@ -312,7 +378,7 @@
                 <label style="color: #94a3b8; font-size: 0.9rem;">Số ngày chuỗi mới:</label>
                 <!-- ✅ FIX: đổi name thành "count" cho khớp controller -->
                 <input type="number" name="count" id="editStreakCount" class="modal-input" min="0" required />
-                <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                <div class="modal-actions">
                     <button type="button" onclick="closeEditStreakModal()" class="sidebar-logout" style="flex: 1; background: transparent; border: 1px solid rgba(255,255,255,0.2);">Hủy</button>
                     <button type="submit" class="sidebar-logout" style="flex: 1; background: #38bdf8; border: 1px solid #38bdf8; color: #0f111a;">Lưu thay đổi</button>
                 </div>
@@ -335,11 +401,11 @@
                 <label style="color: #94a3b8; font-size: 0.9rem;">Ảnh (PNG/JPG/WEBP):</label>
                 <input type="file" name="image" class="modal-input" accept="image/*" required onchange="previewImage(event, 'addPetPreview')" />
 
-                <div style="text-align: center; margin-top: 0.5rem; min-height: 100px;">
-                    <img id="addPetPreview" style="width: 100px; height: 100px; object-fit: contain; display: none; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2));" />
+                <div class="preview-box">
+                    <img id="addPetPreview" style="display: none;" />
                 </div>
 
-                <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                <div class="modal-actions">
                     <button type="button" onclick="document.getElementById('addPetModal').style.display='none'" class="sidebar-logout" style="flex: 1; background: transparent; border: 1px solid rgba(255,255,255,0.2);">Hủy</button>
                     <button type="submit" class="sidebar-logout" style="flex: 1; background: #10b981; border: 1px solid #10b981; color: white;">Thêm Pet</button>
                 </div>
@@ -363,11 +429,11 @@
                 <label style="color: #94a3b8; font-size: 0.9rem;">Thay đổi Ảnh (bỏ trống nếu giữ nguyên):</label>
                 <input type="file" name="image" id="editPetImage" class="modal-input" accept="image/*" onchange="previewImage(event, 'editPetPreview')" />
 
-                <div style="text-align: center; margin-top: 0.5rem; min-height: 100px;">
-                    <img id="editPetPreview" src="" style="width: 100px; height: 100px; object-fit: contain; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2));" />
+                <div class="preview-box">
+                    <img id="editPetPreview" src="" />
                 </div>
 
-                <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                <div class="modal-actions">
                     <button type="button" onclick="document.getElementById('editPetModal').style.display='none'" class="sidebar-logout" style="flex: 1; background: transparent; border: 1px solid rgba(255,255,255,0.2);">Hủy</button>
                     <button type="submit" class="sidebar-logout" style="flex: 1; background: #38bdf8; border: 1px solid #38bdf8; color: #0f111a;">Lưu Thay Đổi</button>
                 </div>

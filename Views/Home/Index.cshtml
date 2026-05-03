@@ -29,6 +29,11 @@
 
 <style>
 .container-custom { max-width: 1000px !important; }
+.home-title {
+    font-size: clamp(2rem, 4vw, 2.5rem);
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+}
 
 .dashboard-layout {
     display: grid;
@@ -116,6 +121,130 @@
     border-color: var(--accent-primary);
 }
 
+.streak-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    padding-bottom: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.streak-header-text {
+    min-width: 0;
+}
+
+.streak-header-text h3 {
+    font-size: 1.5rem;
+    color: white;
+    margin: 0;
+    word-break: break-word;
+}
+
+.streak-header-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+    text-align: right;
+}
+
+.streak-code-row {
+    margin-top: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.connection-side {
+    width: 120px;
+    flex-shrink: 0;
+    min-width: 0;
+}
+
+.connection-side h4 {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: white;
+}
+
+.connection-user-avatar {
+    margin: 0 auto;
+    width: 80px;
+    height: 80px;
+    font-size: 2rem;
+    overflow: hidden;
+    transition: 0.3s;
+    border-radius: 20px;
+}
+
+.connection-action-btn {
+    padding: 0.5rem;
+    font-size: 0.9rem;
+    border-radius: 12px;
+    width: 100%;
+    text-transform: none;
+}
+
+.pet-streak-stack {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 10;
+    max-width: min(100%, 220px);
+}
+
+.sidebar-card {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.friend-item-main {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    overflow: hidden;
+    min-width: 0;
+}
+
+.friend-item-main .friend-copy {
+    overflow: hidden;
+    min-width: 0;
+}
+
+.friend-item-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.friend-item-count {
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    padding-left: 0.5rem;
+    font-weight: bold;
+}
+
+.cancel-modal-actions {
+    display: flex;
+    gap: 1rem;
+}
+
 .streak-card-wrapper {
     display: none;
     animation: fadeIn 0.3s ease;
@@ -151,20 +280,93 @@
 }
 
 @@media(max-width: 768px) {
-    .pet-img {
-        width: 100px !important; height: 100px !important; margin-bottom: -10px !important;
+    .home-title {
+        font-size: 2rem;
     }
+
+    .pet-img {
+        width: 120px !important;
+        height: 120px !important;
+        margin-bottom: -8px !important;
+    }
+
     .streak-center {
         padding: 0.5rem 1rem !important;
     }
+
     .streak-center span {
-        font-size: 1.8rem !important;
+        font-size: 1.75rem !important;
     }
+
     .user-avatar {
         width: 60px !important; height: 60px !important; font-size: 1.5rem !important;
     }
+
     .connection-container {
-        padding: 4rem 0 !important;
+        display: grid;
+        grid-template-columns: 1fr;
+        justify-items: center;
+        gap: 1rem;
+        padding: 1rem 0 0 !important;
+    }
+
+    .connection-line {
+        display: none;
+    }
+
+    .connection-side {
+        width: 100%;
+        max-width: 240px;
+    }
+
+    .pet-streak-stack {
+        position: static;
+        top: auto;
+        left: auto;
+        transform: none;
+        order: 2;
+        max-width: 100%;
+    }
+
+    .streak-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .streak-header-actions {
+        align-items: stretch;
+        text-align: left;
+    }
+
+    .streak-code-row {
+        justify-content: flex-start;
+    }
+
+    .sidebar-card {
+        padding: 1.2rem;
+    }
+
+    .cancel-modal-actions {
+        flex-direction: column;
+    }
+}
+
+@@media(max-width: 520px) {
+    .connection-side h4 {
+        white-space: normal;
+    }
+
+    .streak-header-text h3 {
+        font-size: 1.25rem;
+    }
+
+    .friend-item {
+        padding: 0.75rem;
+    }
+
+    .friend-item-count {
+        font-size: 1rem;
+        padding-left: 0.35rem;
     }
 }
 
@@ -199,7 +401,7 @@
 </style>
 
 <div class="text-center mb-4">
-    <h1 style="font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem;">Chuỗi Của Tôi</h1>
+    <h1 class="home-title">Chuỗi Của Tôi</h1>
     <p class="text-gray">Cùng nhau duy trì chuỗi mỗi ngày nhé!</p>
 </div>
 
@@ -218,16 +420,16 @@
                 var friendAvatar = item.Friend.AvatarUrl;
                 
                 <div class="glass-card streak-card-wrapper @(i == 0 ? "active" : "")" id="streak-card-@i">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem; margin-bottom: 1.5rem;">
-                        <div>
-                            <h3 style="font-size: 1.5rem; color: white; margin: 0;">Chuỗi với <span style="color: #10b981;">@item.Friend.DisplayName</span></h3>
+                    <div class="streak-header">
+                        <div class="streak-header-text">
+                            <h3>Chuỗi với <span style="color: #10b981;">@item.Friend.DisplayName</span></h3>
                             <div style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 0.3rem;">
                                 Phục hồi: <strong style="color: #f472b6;">@item.Streak.RecoveriesLeft/5</strong> lần
                             </div>
                         </div>
-                        <div style="text-align: right;">
+                        <div class="streak-header-actions">
                             <button type="button" onclick="showCancelModal(@item.FriendshipId)" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; padding: 0.4rem 1rem; border-radius: 8px; cursor: pointer; transition: 0.2s; font-weight: bold;">Hủy Chuỗi</button>
-                            <div style="margin-top: 0.5rem; display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem;">
+                            <div class="streak-code-row">
                                 <span style="font-size: 0.8rem; color: var(--text-secondary);">Mã: <strong style="color: #a855f7;">@item.ConnectionCode</strong></span>
                                 <button type="button" onclick="copyCode('@item.ConnectionCode')" style="background: rgba(255,255,255,0.1); border: none; padding: 0.2rem 0.5rem; border-radius: 4px; cursor: pointer; color: white; font-size: 0.75rem;" title="Copy Mã">📋</button>
                             </div>
@@ -236,17 +438,17 @@
                     
                     <div class="connection-container">
                         <!-- Bạn -->
-                        <div class="text-center" style="width: 120px; flex-shrink: 0;">
+                        <div class="text-center connection-side">
                             <a href="/Profile" title="Bấm để đổi tên">
-                                <div class="user-avatar @GetAvatarClass(item.Streak.CurrentStreakCount)" style="margin: 0 auto; width: 80px; height: 80px; font-size: 2rem; overflow: hidden; transition: 0.3s; border-radius: 20px;">
+                                <div class="user-avatar connection-user-avatar @GetAvatarClass(item.Streak.CurrentStreakCount)">
                                     @if(!string.IsNullOrEmpty(myAvatar)) { <img src="@myAvatar" style="width:100%; height:100%; object-fit:cover;" /> } 
                                     else { @(myName.Substring(0,1).ToUpper()) }
                                 </div>
                             </a>
-                            <h4 class="mt-3 mb-2" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: white;">Bạn</h4>
+                            <h4 class="mt-3 mb-2">Bạn</h4>
                             <form method="post" action="/Home/CheckIn">
                                 <input type="hidden" name="friendshipId" value="@item.FriendshipId" />
-                                <button type="submit" class="btn-glow" style="padding: 0.5rem; font-size: 0.9rem; border-radius: 12px; width: 100%; text-transform: none;" @(item.ICheckedIn ? "disabled" : "")>
+                                <button type="submit" class="btn-glow connection-action-btn" @(item.ICheckedIn ? "disabled" : "")>
                                     @(item.ICheckedIn ? "Đã Xong" : "Điểm danh")
                                 </button>
                             </form>
@@ -257,7 +459,7 @@
                         
                         <!-- Center Fire & Pet -->
                         @{ var currentPet = pets?.FirstOrDefault(p => item.Streak.CurrentStreakCount >= p.RequiredStreak); }
-                        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; z-index: 10;">
+                        <div class="pet-streak-stack">
                             @if(currentPet != null) {
                                 <img src="@currentPet.ImageUrl" title="@currentPet.Name" class="pet-img" style="width: 180px; height: 180px; object-fit: contain; animation: bounce-pet 2s infinite ease-in-out; margin-bottom: -20px; filter: drop-shadow(0 0 20px rgba(255,255,255,0.6)); z-index: 11; position: relative; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; transform: translateZ(0); will-change: transform;" />
                             }
@@ -267,13 +469,13 @@
                         </div>
 
                         <!-- Bạn bè -->
-                        <div class="text-center" style="width: 120px; flex-shrink: 0;">
-                            <div class="user-avatar @GetAvatarClass(item.Streak.CurrentStreakCount)" style="margin: 0 auto; width: 80px; height: 80px; font-size: 2rem; overflow: hidden; transition: 0.3s; border-radius: 20px;">
+                        <div class="text-center connection-side">
+                            <div class="user-avatar connection-user-avatar @GetAvatarClass(item.Streak.CurrentStreakCount)">
                                 @if(!string.IsNullOrEmpty(friendAvatar)) { <img src="@friendAvatar" style="width:100%; height:100%; object-fit:cover;" /> } 
                                 else { @(item.Friend.DisplayName.Substring(0,1).ToUpper()) }
                             </div>
-                            <h4 class="mt-3 mb-2" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">@item.Friend.DisplayName</h4>
-                            <button class="btn-glow" style="padding: 0.5rem; font-size: 0.9rem; border-radius: 12px; width: 100%; text-transform: none;" disabled>
+                            <h4 class="mt-3 mb-2">@item.Friend.DisplayName</h4>
+                            <button class="btn-glow connection-action-btn" disabled>
                                 @(item.FriendCheckedIn ? "Đã Xong" : "Đang đợi...")
                             </button>
                         </div>
@@ -283,7 +485,7 @@
         </div>
 
         <!-- Right Column: Sidebar List -->
-        <div class="glass-card" style="padding: 1.5rem; display: flex; flex-direction: column;">
+        <div class="glass-card sidebar-card">
             <h3 class="mb-3" style="font-size: 1.2rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.8rem;">Danh sách Chuỗi</h3>
             
             <!-- Search Box for Friends List -->
@@ -294,13 +496,13 @@
                     var item = Model[i];
                     var friendAvatar = item.Friend.AvatarUrl;
                     <div class="friend-item @(i == 0 ? "active" : "")" onclick="selectStreak(@i, this)" data-name="@item.Friend.DisplayName.ToLower()" data-id="@item.Friend.Username.ToLower()">
-                        <div style="display: flex; align-items: center; gap: 0.8rem; overflow: hidden;">
+                        <div class="friend-item-main">
                             <div class="user-avatar @GetAvatarClass(item.Streak.CurrentStreakCount)" style="width: 40px; height: 40px; font-size: 1.2rem; margin: 0; flex-shrink: 0; overflow: hidden; transition: 0.3s; border-radius: 12px;">
                                 @if(!string.IsNullOrEmpty(friendAvatar)) { <img src="@friendAvatar" style="width:100%; height:100%; object-fit:cover;" /> } 
                                 else { @(item.Friend.DisplayName.Substring(0,1).ToUpper()) }
                             </div>
-                            <div style="overflow: hidden;">
-                                <div style="font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            <div class="friend-copy">
+                                <div class="friend-item-name">
                                     @item.Friend.DisplayName
                                 </div>
                                 <div style="font-size: 0.75rem; color: var(--text-secondary);">
@@ -308,7 +510,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 0.2rem; font-size: 1.1rem; flex-shrink: 0; padding-left: 0.5rem; font-weight: bold;">
+                        <div class="friend-item-count">
                             <span class="@GetStreakClass(item.Streak.CurrentStreakCount)">🔥 @item.Streak.CurrentStreakCount</span>
                         </div>
                     </div>
@@ -332,7 +534,7 @@
             <input type="hidden" name="friendshipId" id="cancelFriendshipId" value="" />
             <input type="text" id="confirmCancelInput" onkeyup="checkCancelInput()" placeholder="Nhập HUYCHUOI..." style="width: 100%; box-sizing: border-box; padding: 0.8rem; border-radius: 8px; border: 1px solid #ef4444; background: rgba(0,0,0,0.3); color: white; margin-bottom: 1.5rem; text-align: center; font-weight: bold; font-size: 1.1rem;" autocomplete="off" />
             
-            <div style="display: flex; gap: 1rem;">
+            <div class="cancel-modal-actions">
                 <button type="button" onclick="hideCancelModal()" class="btn-glow" style="flex: 1; background: #475569; box-shadow: none;">Đóng</button>
                 <button type="submit" id="btnConfirmCancel" class="btn-glow" style="flex: 1; background: #ef4444; box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);" disabled>HỦY CHUỖI</button>
             </div>

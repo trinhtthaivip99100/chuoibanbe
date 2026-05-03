@@ -9,6 +9,14 @@
     --text-secondary: #94a3b8;
 }
 
+html {
+    overflow-x: hidden;
+}
+
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
 body {
     background-color: var(--bg-dark);
     background-image: 
@@ -21,6 +29,12 @@ body {
     margin: 0;
     display: flex;
     flex-direction: column;
+    overflow-x: hidden;
+}
+
+img {
+    max-width: 100%;
+    height: auto;
 }
 
 .glass-card {
@@ -83,6 +97,7 @@ body {
 }
 
 .container-custom {
+    width: min(100%, 800px);
     max-width: 800px;
     margin: 0 auto;
     padding: 2rem 1rem;
@@ -103,6 +118,7 @@ body {
 }
 
 .nav-content {
+    width: min(100%, 800px);
     max-width: 800px;
     margin: 0 auto;
     padding: 0 1rem;
@@ -173,3 +189,26 @@ body {
 .mb-2 { margin-bottom: 1rem; }
 .mb-4 { margin-bottom: 2rem; }
 .text-gray { color: var(--text-secondary); }
+
+@media (max-width: 768px) {
+    .glass-card {
+        padding: 1.25rem;
+        border-radius: 20px;
+    }
+
+    .container-custom {
+        width: 100%;
+        padding: 1.25rem 0.9rem 1.75rem;
+        justify-content: flex-start;
+    }
+
+    .nav-content {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .btn-glow {
+        font-size: 1rem;
+        padding: 0.9rem 1.25rem;
+    }
+}

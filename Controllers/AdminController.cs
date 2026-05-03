@@ -144,7 +144,7 @@ public class AdminController : Controller
             return RedirectToAction("Index");
         }
 
-        // tăng lên 5MB vì GIF thường nặng hơn
+        // tăng lên 10MB vì GIF thường nặng hơn
         long maxSize = 10 * 1024 * 1024; // 10MB
 
         if (image.Length > maxSize)

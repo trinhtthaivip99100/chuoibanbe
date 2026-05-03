@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 using CloudinaryDotNet;
 
+
 var builder = WebApplication.CreateBuilder(args);
 
 // ================= SERVICES =================
@@ -14,6 +15,10 @@ builder.Services.AddSignalR();
 // PostgreSQL
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+//// SQL Server (thêm mới)
+//builder.Services.AddDbContext<AppDbContext>(options =>
+//    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Email
 builder.Services.AddTransient<EmailService>();
